@@ -1,15 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
-import { verifyToken, isFarmer } from '../middleware/auth';
 import { pool } from '../db';
 
 const router = Router();
 
-// Protect all farmer routes
-router.use(verifyToken);
-router.use(isFarmer);
-
-// Get farmer profile (Kenya-specific)
 router.get('/profile', async (req: Request, res: Response) => {
   try {
     const user = req.user as JwtPayload & { userId?: string; id?: string; phone?: string };
@@ -28,7 +22,6 @@ router.get('/profile', async (req: Request, res: Response) => {
   }
 });
 
-// Get farmer profile (me endpoint - existing)
 router.get('/me', async (req: Request, res: Response) => {
   try {
     const user = req.user as JwtPayload & { userId?: string; id?: string };
