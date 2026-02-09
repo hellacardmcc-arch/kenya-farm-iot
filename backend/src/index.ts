@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { pool, testConnection } from './db/index';
+import { pool, initDatabase } from './db';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -17,7 +17,7 @@ app.get('/api/health', async (_req, res) => {
       database: 'connected',
       timestamp: new Date().toISOString(),
       service: 'Kenya Farm IoT Backend',
-      message: '🇰🇪 Inafanya kazi!'
+      region: 'Kenya'
     });
   } catch {
     res.json({
@@ -25,7 +25,7 @@ app.get('/api/health', async (_req, res) => {
       database: 'disconnected',
       timestamp: new Date().toISOString(),
       service: 'Kenya Farm IoT Backend',
-      message: 'Database not connected, but API is running'
+      message: 'Running without database'
     });
   }
 });
@@ -33,7 +33,7 @@ app.get('/api/health', async (_req, res) => {
 app.post('/api/farmers/register', async (req, res) => {
   try {
     const { phone, name, county } = req.body;
-    if (!phone || !/^(07|01)[0-9]{8}$/.test(phone)) {
+    if (!phone || !/^07[0-9]{8}$/.test(phone)) {
       return res.status(400).json({
         success: false,
         message: 'Tafadhali weka namba ya simu ya Kenya (07xxxxxxxx)'
@@ -58,51 +58,93 @@ app.post('/api/farmers/register', async (req, res) => {
   }
 });
 
-app.get('/api/sensor/:phone', async (req, res) => {
+app.post('/api/sensor/reading', async (req, res) => {
+  try {
+    const { phone, moisture, temperature } = req.body;
+    const farmerCheck = await pool.query('SELECT id FROM farmers WHERE phone = $1', [phone]);
+    if (farmerCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Farmer not registered. Please register first.'
+      });
+    }
+    const result = await pool.query(
+      `INSERT INTO sensor_readings (phone, moisture, temperature) VALUES ($1, $2, $3) RETURNING id, moisture, temperature, recorded_at`,
+      [phone, moisture, temperature]
+    );
+    let advice = '';
+    if (moisture < 30) {
+      advice = 'Udongo umekauka. Umwagie maji sasa.';
+    } else if (moisture < 60) {
+      advice = 'Udongo uko sawa. Usiumwagie maji leo.';
+    } else {
+      advice = 'Udongo umejaa maji. Usiumwagie maji wiki ijayo.';
+    }
+    res.json({
+      success: true,
+      reading: result.rows[0],
+      advice,
+      message: 'Sensor data saved successfully'
+    });
+  } catch (error) {
+    console.error('Sensor error:', error);
+    res.status(500).json({ success: false, message: 'Failed to save sensor data' });
+  }
+});
+
+app.get('/api/farmer/:phone/readings', async (req, res) => {
   try {
     const { phone } = req.params;
     const result = await pool.query(
-      `SELECT * FROM sensor_readings WHERE farmer_id = (SELECT id FROM farmers WHERE phone = $1) ORDER BY recorded_at DESC LIMIT 10`,
+      `SELECT moisture, temperature, recorded_at FROM sensor_readings WHERE phone = $1 ORDER BY recorded_at DESC LIMIT 10`,
       [phone]
     );
-    res.json({ success: true, readings: result.rows });
+    res.json({
+      success: true,
+      phone,
+      readings: result.rows,
+      count: result.rows.length
+    });
   } catch {
-    res.status(500).json({ success: false, message: 'Failed to fetch sensor data' });
+    res.status(500).json({ success: false, message: 'Failed to fetch readings' });
   }
 });
 
 app.get('/api/demo', (_req, res) => {
   res.json({
     success: true,
-    message: 'Kenya Farm IoT Demo API',
-    features: [
-      'SMS alerts for soil moisture',
-      'Kenyan farmer registration',
-      'Works on feature phones',
-      'Swahili language support'
+    message: '🇰🇪 Kenya Farm IoT API',
+    endpoints: [
+      'POST /api/farmers/register - Register Kenyan farmer',
+      'POST /api/sensor/reading - Submit sensor data',
+      'GET /api/farmer/:phone/readings - Get farmer readings',
+      'GET /api/health - Health check'
     ],
-    demo_phone: '0712345678',
-    demo_message: 'Udongo umekauka. Umwagie maji kesho asubuhi.'
+    example: {
+      register: {
+        phone: '0712345678',
+        name: 'John Kamau',
+        county: 'Nairobi'
+      }
+    }
   });
 });
 
-const startServer = async () => {
+async function startServer() {
   const PORT = Number(process.env.PORT) || 3000;
-  const dbConnected = await testConnection();
-  if (!dbConnected) {
-    console.log('⚠️  Running in fallback mode (database not connected)');
-    console.log('ℹ️  API will work, but data won\'t persist between restarts');
+  const dbInitialized = await initDatabase();
+  if (!dbInitialized) {
+    console.log('⚠️  Database not initialized. Some features may not work.');
   }
   app.listen(PORT, () => {
     console.log(`✅ Kenya Farm IoT Backend running on port ${PORT}`);
-    console.log(`🌍 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`📞 Register farmer: POST http://localhost:${PORT}/api/farmers/register`);
-    if (!dbConnected) {
-      console.log('⚠️  DATABASE NOT CONNECTED - Check Render PostgreSQL setup');
-      console.log('🔗 Create database: Render Dashboard → New PostgreSQL');
-      console.log('🔧 Then add DATABASE_URL to environment variables');
+    console.log(`🌍 Health: http://localhost:${PORT}/api/health`);
+    console.log(`📞 Demo: http://localhost:${PORT}/api/demo`);
+    if (!dbInitialized) {
+      console.log('⚠️  IMPORTANT: Set DATABASE_URL environment variable');
+      console.log('🔗 Create PostgreSQL on Render and add DATABASE_URL');
     }
   });
-};
+}
 
 startServer();
