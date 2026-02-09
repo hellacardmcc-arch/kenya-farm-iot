@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import { log, logError } from './utils/logger';
+import { SMSService } from './services/sms.service';
+import { validateFarmerRegistration } from './middleware/validation';
 
 const app = express();
 app.use(cors());
@@ -34,17 +36,11 @@ app.get('/api/status', (_req, res) => {
   });
 });
 
-app.post('/api/farmers/register', async (req, res) => {
+app.post('/api/farmers/register', validateFarmerRegistration, async (req, res) => {
   log('Farmer registration attempt', { phone: req.body?.phone });
 
   try {
     const { phone, name, county } = req.body;
-    if (!phone || !/^07[0-9]{8}$/.test(phone)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tafadhali weka namba ya simu ya Kenya (07xxxxxxxx)'
-      });
-    }
     if (farmers.find(f => f.phone === phone)) {
       return res.status(400).json({
         success: false,
@@ -60,6 +56,12 @@ app.post('/api/farmers/register', async (req, res) => {
     };
     farmers.push(farmer);
     log('Farmer registered successfully', { phone, name });
+
+    const smsSent = await SMSService.sendWelcomeSMS(phone, name);
+    if (smsSent) {
+      log('Welcome SMS sent successfully', { phone });
+    }
+
     res.json({
       success: true,
       message: `Karibu ${name} kutoka ${county}!`,
