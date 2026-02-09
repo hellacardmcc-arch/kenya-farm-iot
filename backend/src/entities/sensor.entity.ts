@@ -16,14 +16,14 @@ import { Alert } from "./alert.entity";
 @Entity("sensors")
 export class Sensor {
   @PrimaryGeneratedColumn("uuid")
-  id: string;
+  id!: string;
 
   @Column({ type: "uuid", name: "farmer_id" })
   @Index("idx_sensors_farmer_id")
-  farmerId: string;
+  farmerId!: string;
 
   @Column({ type: "varchar", length: 255 })
-  name: string;
+  name!: string;
 
   @Column({
     type: "varchar",
@@ -31,31 +31,31 @@ export class Sensor {
     name: "sensor_type",
     default: "soil_moisture",
   })
-  sensorType: string;
+  sensorType!: string;
 
   @Column({ type: "varchar", length: 255, nullable: true })
-  location: string | null;
+  location!: string | null;
 
   @Column({ type: "varchar", length: 255, nullable: true, name: "mqtt_topic" })
-  mqttTopic: string | null;
+  mqttTopic!: string | null;
 
   @Column({ type: "boolean", default: true, name: "is_active" })
-  isActive: boolean;
+  isActive!: boolean;
 
   @CreateDateColumn({ type: "timestamptz", name: "created_at" })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ type: "timestamptz", name: "updated_at" })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   // Relations
   @ManyToOne(() => Farmer, (farmer) => farmer.sensors, { onDelete: "CASCADE" })
   @JoinColumn({ name: "farmer_id" })
-  farmer: Farmer;
+  farmer!: Farmer;
 
   @OneToMany(() => Reading, (reading) => reading.sensor)
-  readings: Reading[];
+  readings!: Reading[];
 
   @OneToMany(() => Alert, (alert) => alert.sensor)
-  alerts: Alert[];
+  alerts!: Alert[];
 }

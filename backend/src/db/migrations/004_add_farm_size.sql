@@ -2,9 +2,12 @@
 ALTER TABLE farmers 
 ADD COLUMN IF NOT EXISTS farm_size DECIMAL(5, 2);
 
--- Update phone column length to 10 (Kenyan phone format)
-ALTER TABLE farmers 
-ALTER COLUMN phone TYPE VARCHAR(10);
+-- Note: Keeping phone column as VARCHAR(20) to support both formats:
+-- - Kenyan format: 0712345678 (10 chars)
+-- - International format: 254723997119 (12 chars)
+-- If you want to enforce 10-char format, update existing data first:
+-- UPDATE farmers SET phone = RIGHT(phone, 10) WHERE LENGTH(phone) > 10;
+-- Then run: ALTER TABLE farmers ALTER COLUMN phone TYPE VARCHAR(10);
 
 -- Make password_hash nullable (for simplified registration)
 ALTER TABLE farmers 
