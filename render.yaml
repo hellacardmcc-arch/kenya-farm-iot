@@ -24,13 +24,13 @@ services:
         sync: false
 
   - type: web
-    name: kenya-farm-iot-frontend
+    name: kenya-farm-dashboard
     runtime: static
     region: oregon
     plan: free
-    rootDir: frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: dist
+    rootDir: .
+    buildCommand: echo "Building static site..." && cp -r frontend/* ./
+    staticPublishPath: .
     envVars:
       - key: VITE_API_URL
         sync: false
