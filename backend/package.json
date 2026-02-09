@@ -8,8 +8,10 @@
   },
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "nodemon",
     "build": "tsc",
+    "dev": "nodemon src/index.ts",
+    "render-build": "npm install && npm run build",
+    "migrate": "npx ts-node src/migrations/run-migrations.ts",
     "build:ci": "npm install && npm run build",
     "build:tsc": "tsc -p tsconfig.json",
     "build:copy": "copyfiles -u 1 \"src/**/*.html\" \"src/**/*.css\" dist/ || exit 0",
@@ -22,6 +24,7 @@
   "dependencies": {
     "africastalking": "^0.6.0",
     "bcrypt": "^5.1.1",
+    "better-sqlite3": "^9.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
