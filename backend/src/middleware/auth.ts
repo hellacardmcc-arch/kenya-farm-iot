@@ -13,7 +13,7 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
   }
   const token = auth.slice(7);
   try {
-    const decoded = jwt.verify(token, secret) as JwtPayload;
+    const decoded = jwt.verify(token, secret as string) as unknown as JwtPayload;
     req.user = decoded;
     next();
   } catch {

@@ -1,7 +1,7 @@
 import { Request } from 'express';
 
 export interface JwtPayload {
-  farmerId: string;
+  userId: string;
   phone: string;
 }
 

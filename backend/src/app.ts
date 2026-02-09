@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { authRouter } from './routes/auth';
-import { farmersRouter } from './routes/farmers';
+import authRouter from './routes/auth';
+import farmersRouter from './routes/farmers';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
