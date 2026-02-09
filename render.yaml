@@ -1,0 +1,41 @@
+# Render.com blueprint - Kenya Farm IoT
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: kenya-farm-iot-backend
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kenya-farm-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false
+
+  - type: web
+    name: kenya-farm-iot-frontend
+    runtime: static
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+
+databases:
+  - name: kenya-farm-db
+    region: oregon
+    plan: free
