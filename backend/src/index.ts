@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { log, logError } from './utils/logger';
 
 const app = express();
 app.use(cors());
@@ -18,34 +19,60 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-app.post('/api/farmers/register', (req, res) => {
-  const { phone, name, county } = req.body;
-  if (!phone || !/^07[0-9]{8}$/.test(phone)) {
-    return res.status(400).json({
-      success: false,
-      message: 'Tafadhali weka namba ya simu ya Kenya (07xxxxxxxx)'
-    });
-  }
-  if (farmers.find(f => f.phone === phone)) {
-    return res.status(400).json({
-      success: false,
-      message: 'Namba ya simu tayari imesajiliwa'
-    });
-  }
-  const farmer = {
-    id: farmers.length + 1,
-    phone,
-    name,
-    county,
-    createdAt: new Date()
-  };
-  farmers.push(farmer);
+app.get('/api/status', (_req, res) => {
+  const currentTime = new Date();
+  const uptime = process.uptime();
   res.json({
-    success: true,
-    message: `Karibu ${name} kutoka ${county}!`,
-    farmer,
-    total: farmers.length
+    status: 'operational',
+    version: '1.0.0',
+    uptime: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
+    database: 'in-memory',
+    farmers: farmers.length,
+    readings: readings.length,
+    timestamp: currentTime.toISOString(),
+    region: 'Kenya'
   });
+});
+
+app.post('/api/farmers/register', async (req, res) => {
+  log('Farmer registration attempt', { phone: req.body?.phone });
+
+  try {
+    const { phone, name, county } = req.body;
+    if (!phone || !/^07[0-9]{8}$/.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tafadhali weka namba ya simu ya Kenya (07xxxxxxxx)'
+      });
+    }
+    if (farmers.find(f => f.phone === phone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Namba ya simu tayari imesajiliwa'
+      });
+    }
+    const farmer = {
+      id: farmers.length + 1,
+      phone,
+      name,
+      county,
+      createdAt: new Date()
+    };
+    farmers.push(farmer);
+    log('Farmer registered successfully', { phone, name });
+    res.json({
+      success: true,
+      message: `Karibu ${name} kutoka ${county}!`,
+      farmer,
+      total: farmers.length
+    });
+  } catch (error) {
+    logError(error, 'farmer registration');
+    res.status(500).json({
+      success: false,
+      message: 'Registration failed'
+    });
+  }
 });
 
 app.post('/api/sensor/reading', (req, res) => {
