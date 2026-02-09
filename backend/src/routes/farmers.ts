@@ -1,14 +1,42 @@
 import { Router, Request, Response } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { JwtPayload } from 'jsonwebtoken';
+import { verifyToken, isFarmer } from '../middleware/auth';
 import { pool } from '../db';
-import { AuthenticatedRequest } from '../types';
 
 const router = Router();
-router.use(authMiddleware);
 
-router.get('/me', async (req: AuthenticatedRequest, res: Response) => {
+// Protect all farmer routes
+router.use(verifyToken);
+router.use(isFarmer);
+
+// Get farmer profile (Kenya-specific)
+router.get('/profile', async (req: Request, res: Response) => {
   try {
-    const farmerId = req.user!.userId;
+    const user = req.user as JwtPayload & { userId?: string; id?: string; phone?: string };
+    const farmerPhone = user?.phone;
+    
+    res.json({
+      success: true,
+      message: `Habari ${farmerPhone}`,
+      data: req.user
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch profile' 
+    });
+  }
+});
+
+// Get farmer profile (me endpoint - existing)
+router.get('/me', async (req: Request, res: Response) => {
+  try {
+    const user = req.user as JwtPayload & { userId?: string; id?: string };
+    const farmerId = user?.userId ?? user?.id;
+    if (!farmerId) {
+      res.status(401).json({ error: 'Authentication required.' });
+      return;
+    }
     const { rows } = await pool.query(
       'SELECT id, phone, name, county, created_at FROM farmers WHERE id = $1',
       [farmerId]

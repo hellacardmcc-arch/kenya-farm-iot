@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import authRouter from './routes/auth';
 import farmersRouter from './routes/farmers';
+import { verifyToken } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
