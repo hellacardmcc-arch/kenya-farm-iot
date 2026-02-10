@@ -18,7 +18,7 @@ export function validateFarmerRegistration(req: Request, res: Response, next: Ne
   // Validate county
   const kenyanCounties = [
     'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Kiambu',
-    'Machakos', 'Meru', 'Kisii', 'Kakamega', 'Bungoma', 'Busia'
+    'Machakos', 'Meru', 'Kisii', 'Kakamega', 'Bungoma', 'Busia', 'Other'
   ];
 
   if (!county || !kenyanCounties.includes(county)) {

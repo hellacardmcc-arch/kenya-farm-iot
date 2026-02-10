@@ -47,6 +47,59 @@ export async function runMigrations() {
           );
           CREATE INDEX IF NOT EXISTS idx_otps_expires_at ON otps(expires_at);
         `
+      },
+      {
+        name: '005_create_feedback_table',
+        sql: `
+          CREATE TABLE IF NOT EXISTS feedback (
+            id SERIAL PRIMARY KEY,
+            phone VARCHAR(10),
+            message TEXT NOT NULL,
+            rating INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE INDEX IF NOT EXISTS idx_feedback_phone ON feedback(phone);
+        `
+      },
+      {
+        name: '006_create_crops_and_schedules',
+        sql: `
+          -- Crops table with Kenyan crop types
+          CREATE TABLE IF NOT EXISTS crops (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(50) UNIQUE NOT NULL,
+            swahili_name VARCHAR(50),
+            optimal_moisture_min DECIMAL(5,2),
+            optimal_moisture_max DECIMAL(5,2),
+            water_requirement_mm DECIMAL(5,2),
+            growth_days INTEGER,
+            description TEXT
+          );
+
+          -- Farmer's crop assignments
+          CREATE TABLE IF NOT EXISTS farmer_crops (
+            id SERIAL PRIMARY KEY,
+            farmer_id INTEGER REFERENCES farmers(id),
+            crop_id INTEGER REFERENCES crops(id),
+            planting_date DATE NOT NULL,
+            area_acres DECIMAL(5,2),
+            status VARCHAR(20) DEFAULT 'growing',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+
+          -- Watering schedule
+          CREATE TABLE IF NOT EXISTS watering_schedules (
+            id SERIAL PRIMARY KEY,
+            farmer_crop_id INTEGER REFERENCES farmer_crops(id),
+            scheduled_date DATE NOT NULL,
+            scheduled_time TIME DEFAULT '06:00:00',
+            water_amount_mm DECIMAL(5,2),
+            status VARCHAR(20) DEFAULT 'pending',
+            actual_water_used DECIMAL(5,2),
+            completed_at TIMESTAMP,
+            notes TEXT
+          );
+        `
       }
     ];
     

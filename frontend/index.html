@@ -1,51 +1,1218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kenya Farm IoT Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🇰🇪 Kenya Farm IoT - Smart Farming Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Kenya theme colors */
+        .kenya-green { background-color: #006600; }
+        .kenya-red { background-color: #BB0000; }
+        .kenya-black { background-color: #000000; }
+        
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        
+        /* Mobile optimizations */
+        @media (max-width: 640px) {
+            .mobile-stack { flex-direction: column; }
+            .mobile-full { width: 100% !important; }
+        }
+        
+        /* Loading states */
+        .loading {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
 </head>
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.tsx"></script>
-  <script>
-    // USSD simulation for feature phones
-    function showUSSDMenu() {
-      const menu = `
-        *384*85#
-        
-        1. Check soil moisture
-        2. Last reading
-        3. Water advice
-        4. Register complaint
-        0. Exit
-        
-        Enter choice:
-      `;
-      
-      const choice = prompt(menu);
-      handleUSSDChoice(choice);
-    }
+<body class="bg-gray-50">
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
+        <div class="text-center">
+            <div class="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h2 class="text-xl font-bold text-gray-800">Inapakia Kenya Farm IoT</h2>
+            <p class="text-gray-600 mt-2">Tafadhali subiri...</p>
+        </div>
+    </div>
 
-    function handleUSSDChoice(choice) {
-      switch (choice) {
-        case '1':
-          alert('Current moisture: 45% (Moderate)');
-          break;
-        case '2':
-          alert('Last reading: 42% at 2:30 PM');
-          break;
-        case '3':
-          alert('Water tomorrow morning');
-          break;
-        case '4':
-          const complaint = prompt('Describe issue:');
-          alert("Complaint registered. We'll call you.");
-          break;
-        default:
-          alert('Exiting USSD');
-      }
-    }
-  </script>
+    <!-- Navigation -->
+    <nav class="kenya-green text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center">
+                <span class="text-2xl mr-3">🇰🇪</span>
+                <div>
+                    <h1 class="text-xl font-bold">Kenya Farm IoT</h1>
+                    <p class="text-green-200 text-sm">Smart Farming Dashboard</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span id="connectionStatus" class="px-3 py-1 rounded-full text-sm bg-green-700">
+                    <i class="fas fa-wifi mr-1"></i> Connecting...
+                </span>
+                <button type="button" onclick="toggleTheme()" class="p-2 rounded-full bg-white text-green-700">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container mx-auto px-4 py-6">
+        <!-- Connection Status Banner -->
+        <div id="statusBanner" class="hidden p-4 rounded-lg mb-6">
+            <div class="flex items-center">
+                <i class="fas fa-info-circle mr-3 text-xl"></i>
+                <div>
+                    <p id="statusMessage" class="font-medium"></p>
+                    <p id="statusDetails" class="text-sm opacity-90"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Left Column: Registration & Crops -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Farmer Registration Card -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-gray-800">
+                            <i class="fas fa-user-plus mr-2 text-green-600"></i>
+                            Farmer Registration
+                        </h2>
+                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                            <i class="fas fa-bolt mr-1"></i> LIVE
+                        </span>
+                    </div>
+                    
+                    <form id="registrationForm" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-medium mb-2">
+                                    <i class="fas fa-phone mr-2"></i> Kenyan Phone Number
+                                </label>
+                                <div class="flex">
+                                    <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                                        +254
+                                    </span>
+                                    <input type="tel" id="phone" 
+                                        class="flex-1 p-3 border border-gray-300 rounded-r-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                        placeholder="712345678"
+                                        pattern="7[0-9]{8}"
+                                        maxlength="9"
+                                        required>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Enter your Safaricom, Airtel, or Telkom number without 0</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 text-sm font-medium mb-2">
+                                    <i class="fas fa-user mr-2"></i> Full Name
+                                </label>
+                                <input type="text" id="name" 
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                    placeholder="John Kamau"
+                                    required>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-medium mb-2">
+                                    <i class="fas fa-map-marker-alt mr-2"></i> County
+                                </label>
+                                <select id="county" 
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                    required>
+                                    <option value="">Select County</option>
+                                    <option value="Nairobi">Nairobi</option>
+                                    <option value="Kiambu">Kiambu</option>
+                                    <option value="Nakuru">Nakuru</option>
+                                    <option value="Kisumu">Kisumu</option>
+                                    <option value="Mombasa">Mombasa</option>
+                                    <option value="Machakos">Machakos</option>
+                                    <option value="Meru">Meru</option>
+                                    <option value="Kisii">Kisii</option>
+                                    <option value="Kakamega">Kakamega</option>
+                                    <option value="Bungoma">Bungoma</option>
+                                    <option value="Other">Other County</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 text-sm font-medium mb-2">
+                                    <i class="fas fa-ruler-combined mr-2"></i> Farm Size (Acres)
+                                </label>
+                                <input type="number" id="farmSize" step="0.1" min="0.1"
+                                    class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                    placeholder="1.5"
+                                    value="1.0">
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="consent" 
+                                class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                                required>
+                            <label for="consent" class="ml-2 block text-sm text-gray-700">
+                                I agree to receive SMS alerts about soil moisture (free service)
+                            </label>
+                        </div>
+                        
+                        <div class="pt-2">
+                            <button type="submit" id="registerBtn"
+                                class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                                <i class="fas fa-paper-plane mr-2"></i>
+                                <span id="registerBtnText">Register Farmer</span>
+                                <span id="registerBtnLoading" class="hidden">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i> Registering...
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Registration Feedback -->
+                    <div id="registrationResult" class="hidden mt-4 p-4 rounded-lg">
+                        <div class="flex items-center">
+                            <i id="resultIcon" class="fas mr-3 text-xl"></i>
+                            <div>
+                                <h4 id="resultTitle" class="font-bold"></h4>
+                                <p id="resultMessage" class="text-sm"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- My Crops Management -->
+                <div id="cropsSection" class="bg-white rounded-xl shadow-lg p-6 hidden">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6">
+                        <i class="fas fa-seedling mr-2 text-green-600"></i>
+                        My Crops Management
+                    </h2>
+                    
+                    <!-- Add Crop Form -->
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="font-medium text-gray-700 mb-3">Add New Crop</h3>
+                        <form id="addCropForm" class="space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <div class="md:col-span-2">
+                                    <select id="cropSelect" 
+                                        class="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-green-500"
+                                        required>
+                                        <option value="">Select Crop Type</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <input type="date" id="plantingDate"
+                                        class="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-green-500"
+                                        required>
+                                </div>
+                                <div>
+                                    <div class="flex">
+                                        <input type="number" id="cropArea" step="0.01" min="0.01"
+                                            class="w-full p-2 border border-gray-300 rounded-l focus:ring-1 focus:ring-green-500"
+                                            placeholder="0.5"
+                                            required>
+                                        <span class="bg-gray-100 px-3 py-2 border border-l-0 border-gray-300 rounded-r text-gray-600">acres</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="submit"
+                                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+                                    <i class="fas fa-plus mr-2"></i>Add Crop
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Crops List -->
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-medium text-gray-700">My Current Crops</h3>
+                            <button type="button" onclick="loadMyCrops()" class="text-green-600 hover:text-green-800 text-sm">
+                                <i class="fas fa-sync-alt mr-1"></i>Refresh
+                            </button>
+                        </div>
+                        <div id="cropsList" class="space-y-3">
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-seedling text-3xl mb-3 opacity-50"></i>
+                                <p>No crops added yet. Add your first crop above.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Stats & Watering -->
+            <div class="space-y-6">
+                <!-- Stats Overview -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-chart-line mr-2 text-blue-600"></i>
+                        Farm Statistics
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                            <div>
+                                <p class="text-sm text-gray-600">Registered Farmers</p>
+                                <p id="totalFarmers" class="text-2xl font-bold">0</p>
+                            </div>
+                            <i class="fas fa-users text-blue-500 text-2xl"></i>
+                        </div>
+                        
+                        <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                            <div>
+                                <p class="text-sm text-gray-600">Active Crops</p>
+                                <p id="totalCrops" class="text-2xl font-bold">0</p>
+                            </div>
+                            <i class="fas fa-seedling text-green-500 text-2xl"></i>
+                        </div>
+                        
+                        <div class="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
+                            <div>
+                                <p class="text-sm text-gray-600">Water Saved</p>
+                                <p id="waterSaved" class="text-2xl font-bold">0 L</p>
+                            </div>
+                            <i class="fas fa-tint text-yellow-500 text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Today's Watering -->
+                <div id="wateringSection" class="bg-white rounded-xl shadow-lg p-6 hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-800">
+                            <i class="fas fa-tint mr-2 text-blue-600"></i>
+                            Today's Watering
+                        </h2>
+                        <span id="wateringCount" class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">0</span>
+                    </div>
+                    
+                    <div id="wateringTasks" class="space-y-3">
+                        <p class="text-gray-500 text-center py-4">No watering tasks for today</p>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <button type="button" onclick="loadWateringTasks()" 
+                            class="w-full text-center text-blue-600 hover:text-blue-800 font-medium">
+                            <i class="fas fa-sync-alt mr-2"></i>Refresh Tasks
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-bolt mr-2 text-orange-600"></i>
+                        Quick Actions
+                    </h2>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" onclick="checkHealth()" 
+                            class="p-3 bg-green-50 hover:bg-green-100 rounded-lg text-center transition">
+                            <i class="fas fa-heartbeat text-green-600 text-xl mb-1"></i>
+                            <p class="text-sm font-medium">Check Health</p>
+                        </button>
+                        
+                        <button type="button" onclick="simulateSensor()" 
+                            class="p-3 bg-blue-50 hover:bg-blue-100 rounded-lg text-center transition">
+                            <i class="fas fa-signal text-blue-600 text-xl mb-1"></i>
+                            <p class="text-sm font-medium">Test Sensor</p>
+                        </button>
+                        
+                        <button type="button" onclick="showDemoSMS()" 
+                            class="p-3 bg-purple-50 hover:bg-purple-100 rounded-lg text-center transition">
+                            <i class="fas fa-sms text-purple-600 text-xl mb-1"></i>
+                            <p class="text-sm font-medium">SMS Demo</p>
+                        </button>
+                        
+                        <button type="button" onclick="resetDemo()" 
+                            class="p-3 bg-red-50 hover:bg-red-100 rounded-lg text-center transition">
+                            <i class="fas fa-redo text-red-600 text-xl mb-1"></i>
+                            <p class="text-sm font-medium">Reset Demo</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Sensor Readings -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800">
+                    <i class="fas fa-chart-area mr-2 text-green-600"></i>
+                    Recent Sensor Readings
+                </h2>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                        <span class="text-sm">Moisture</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                        <span class="text-sm">Temperature</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="h-64">
+                <canvas id="readingsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-8">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h4 class="font-bold text-lg mb-4">Kenya Farm IoT</h4>
+                    <p class="text-gray-400">
+                        Empowering Kenyan farmers with affordable smart farming technology.
+                        No smartphone needed - works via SMS on any phone.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg mb-4">Contact Support</h4>
+                    <p class="text-gray-400">
+                        <i class="fas fa-phone mr-2"></i>0712 345 678<br>
+                        <i class="fas fa-envelope mr-2"></i>support@kenyafarmiot.co.ke<br>
+                        <i class="fas fa-clock mr-2"></i>7am-7pm, 7 days a week
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg mb-4">System Status</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Backend API:</span>
+                            <span id="backendStatus" class="text-yellow-400">Checking...</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Database:</span>
+                            <span id="databaseStatus" class="text-yellow-400">Checking...</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Uptime:</span>
+                            <span id="uptimeStatus" class="text-gray-400">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                <p>© 2024 Kenya Farm IoT. All rights reserved.</p>
+                <p class="text-sm mt-2">MVP Version 1.0 • Built for Kenyan Farmers</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- JavaScript Application -->
+    <script>
+        // ==================== CONFIGURATION ====================
+        // Connect to local backend (uses your database); production uses Render
+        const API_URL = (typeof window !== 'undefined' && window.location.hostname === 'localhost')
+            ? 'http://localhost:3001'
+            : 'https://kenya-farm-backend.onrender.com';
+        
+        // ==================== STATE MANAGEMENT ====================
+        let appState = {
+            currentFarmer: null,
+            crops: [],
+            wateringTasks: [],
+            sensorReadings: [],
+            backendConnected: false,
+            databaseConnected: false
+        };
+        
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Hide loading overlay
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }, 1000);
+            
+            // Initialize connection
+            await checkBackendConnection();
+            
+            // Load crops dropdown
+            await loadCropOptions();
+            
+            // Initialize chart
+            initializeChart();
+            
+            // Check for existing farmer in localStorage
+            const savedFarmer = localStorage.getItem('kenyaFarm_farmer');
+            if (savedFarmer) {
+                appState.currentFarmer = JSON.parse(savedFarmer);
+                showFarmerDashboard(appState.currentFarmer.phone);
+            }
+        });
+        
+        // ==================== BACKEND CONNECTION ====================
+        async function checkBackendConnection() {
+            try {
+                showStatus('Connecting to backend...', 'info');
+                
+                const response = await fetchWithTimeout(`${API_URL}/api/health`, {
+                    timeout: 5000
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                appState.backendConnected = true;
+                appState.databaseConnected = data.database === 'connected';
+                
+                updateConnectionStatus();
+                showStatus('Connected to backend successfully!', 'success');
+                
+                // Update footer status
+                document.getElementById('backendStatus').textContent = '✅ Online';
+                document.getElementById('backendStatus').className = 'text-green-400';
+                document.getElementById('databaseStatus').textContent = 
+                    appState.databaseConnected ? '✅ Connected' : '⚠️ Offline';
+                document.getElementById('databaseStatus').className = 
+                    appState.databaseConnected ? 'text-green-400' : 'text-yellow-400';
+                document.getElementById('uptimeStatus').textContent = 
+                    data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '--';
+                
+                // Load system stats
+                if (appState.databaseConnected) {
+                    loadSystemStats();
+                }
+                
+            } catch (error) {
+                console.error('Backend connection failed:', error);
+                appState.backendConnected = false;
+                appState.databaseConnected = false;
+                
+                showStatus('Backend not available. Using demo mode.', 'warning');
+                updateConnectionStatus();
+                
+                // Update footer status
+                document.getElementById('backendStatus').textContent = '❌ Offline';
+                document.getElementById('backendStatus').className = 'text-red-400';
+                document.getElementById('databaseStatus').textContent = '❌ Offline';
+                document.getElementById('databaseStatus').className = 'text-red-400';
+            }
+        }
+        
+        function updateConnectionStatus() {
+            const statusEl = document.getElementById('connectionStatus');
+            if (appState.backendConnected) {
+                statusEl.innerHTML = '<i class="fas fa-wifi mr-1"></i> Connected';
+                statusEl.className = 'px-3 py-1 rounded-full text-sm bg-green-700';
+            } else {
+                statusEl.innerHTML = '<i class="fas fa-wifi-slash mr-1"></i> Offline';
+                statusEl.className = 'px-3 py-1 rounded-full text-sm bg-red-700';
+            }
+        }
+        
+        // ==================== FARMER REGISTRATION ====================
+        document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Get form data
+            const phone = '0' + document.getElementById('phone').value.trim();
+            const name = document.getElementById('name').value.trim();
+            const county = document.getElementById('county').value;
+            const farmSize = document.getElementById('farmSize').value;
+            
+            // Validate Kenyan phone
+            if (!/^07[0-9]{8}$/.test(phone)) {
+                showToast('Please enter a valid Kenyan phone number (7XXXXXXXX)', 'error');
+                return;
+            }
+            
+            if (!county) {
+                showToast('Please select your county', 'error');
+                return;
+            }
+            
+            // Show loading state
+            const btn = document.getElementById('registerBtn');
+            const btnText = document.getElementById('registerBtnText');
+            const btnLoading = document.getElementById('registerBtnLoading');
+            
+            btn.disabled = true;
+            btnText.classList.add('hidden');
+            btnLoading.classList.remove('hidden');
+            
+            try {
+                // Call backend API
+                const response = await fetch(`${API_URL}/api/farmers/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone: phone,
+                        name: name,
+                        county: county,
+                        farm_size: parseFloat(farmSize)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Show result
+                const resultEl = document.getElementById('registrationResult');
+                const iconEl = document.getElementById('resultIcon');
+                const titleEl = document.getElementById('resultTitle');
+                const messageEl = document.getElementById('resultMessage');
+                
+                if (response.ok && data.success) {
+                    // Success
+                    resultEl.className = 'mt-4 p-4 rounded-lg bg-green-50 border border-green-200';
+                    iconEl.className = 'fas fa-check-circle text-green-600 mr-3 text-xl';
+                    titleEl.textContent = 'Registration Successful!';
+                    messageEl.textContent = data.message || `Welcome ${name}!`;
+                    
+                    showToast(`Welcome ${name}! Registration successful.`, 'success');
+                    
+                    // Save farmer to state and localStorage
+                    appState.currentFarmer = {
+                        phone: phone,
+                        name: name,
+                        county: county,
+                        farmSize: farmSize,
+                        registeredAt: new Date().toISOString()
+                    };
+                    
+                    localStorage.setItem('kenyaFarm_farmer', JSON.stringify(appState.currentFarmer));
+                    
+                    // Show farmer dashboard
+                    showFarmerDashboard(phone);
+                    
+                    // Reset form
+                    document.getElementById('registrationForm').reset();
+                    
+                    // Update stats
+                    loadSystemStats();
+                    
+                } else {
+                    // Error
+                    resultEl.className = 'mt-4 p-4 rounded-lg bg-red-50 border border-red-200';
+                    iconEl.className = 'fas fa-exclamation-circle text-red-600 mr-3 text-xl';
+                    titleEl.textContent = 'Registration Failed';
+                    messageEl.textContent = data.message || 'Please try again later.';
+                    
+                    showToast(data.message || 'Registration failed', 'error');
+                }
+                
+                resultEl.classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                
+                // Show demo success in offline mode
+                showToast(`Demo: Welcome ${name} from ${county}! (Offline mode)`, 'success');
+                
+                // Simulate success for demo
+                appState.currentFarmer = {
+                    phone: phone,
+                    name: name,
+                    county: county,
+                    farmSize: farmSize,
+                    registeredAt: new Date().toISOString()
+                };
+                
+                localStorage.setItem('kenyaFarm_farmer', JSON.stringify(appState.currentFarmer));
+                showFarmerDashboard(phone);
+                document.getElementById('registrationForm').reset();
+                
+            } finally {
+                // Reset button
+                btn.disabled = false;
+                btnText.classList.remove('hidden');
+                btnLoading.classList.add('hidden');
+            }
+        });
+        
+        // ==================== FARMER DASHBOARD ====================
+        function showFarmerDashboard(phone) {
+            // Show crops and watering sections
+            document.getElementById('cropsSection').classList.remove('hidden');
+            document.getElementById('wateringSection').classList.remove('hidden');
+            
+            // Load farmer's data
+            loadMyCrops();
+            loadWateringTasks();
+            loadSensorReadings(phone);
+            
+            // Update welcome message in stats
+            if (appState.currentFarmer) {
+                const welcomeEl = document.querySelector('.stats-welcome');
+                if (welcomeEl) welcomeEl.textContent = `Welcome, ${appState.currentFarmer.name}!`;
+            }
+        }
+        
+        // ==================== CROP MANAGEMENT ====================
+        async function loadCropOptions() {
+            try {
+                const response = await fetch(`${API_URL}/api/crops`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('cropSelect');
+                    select.innerHTML = '<option value="">Select Crop Type</option>';
+                    
+                    data.crops.forEach(crop => {
+                        const option = document.createElement('option');
+                        option.value = crop.id;
+                        option.textContent = `${crop.swahili_name} (${crop.name})`;
+                        option.setAttribute('data-swahili', crop.swahili_name);
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.log('Using demo crops data');
+                // Demo crops
+                const demoCrops = [
+                    {id: 1, name: 'maize', swahili_name: 'mahindi'},
+                    {id: 2, name: 'kale', swahili_name: 'sukuma wiki'},
+                    {id: 3, name: 'tomatoes', swahili_name: 'nyanya'},
+                    {id: 4, name: 'capsicum', swahili_name: 'pilipili hoho'},
+                    {id: 5, name: 'watermelon', swahili_name: 'tikiti maji'}
+                ];
+                
+                const select = document.getElementById('cropSelect');
+                demoCrops.forEach(crop => {
+                    const option = document.createElement('option');
+                    option.value = crop.id;
+                    option.textContent = `${crop.swahili_name} (${crop.name})`;
+                    option.setAttribute('data-swahili', crop.swahili_name);
+                    select.appendChild(option);
+                });
+            }
+        }
+        
+        document.getElementById('addCropForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!appState.currentFarmer) {
+                showToast('Please register as a farmer first', 'error');
+                return;
+            }
+            
+            const cropId = document.getElementById('cropSelect').value;
+            const plantingDate = document.getElementById('plantingDate').value;
+            const area = document.getElementById('cropArea').value;
+            
+            if (!cropId || !plantingDate || !area) {
+                showToast('Please fill all crop details', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/api/farmers/${appState.currentFarmer.phone}/crops`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        crop_id: parseInt(cropId),
+                        planting_date: plantingDate,
+                        area_acres: parseFloat(area)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showToast(data.message, 'success');
+                    document.getElementById('addCropForm').reset();
+                    loadMyCrops();
+                    loadWateringTasks();
+                } else {
+                    showToast(data.message || 'Failed to add crop', 'error');
+                }
+            } catch (error) {
+                console.log('Using demo crop addition');
+                showToast('Demo: Crop added successfully!', 'success');
+                document.getElementById('addCropForm').reset();
+                
+                // Add to local state for demo
+                const cropName = document.querySelector(`#cropSelect option[value="${cropId}"]`).getAttribute('data-swahili');
+                appState.crops.push({
+                    id: Date.now(),
+                    crop_name: cropName,
+                    planting_date: plantingDate,
+                    area_acres: area,
+                    status: 'growing'
+                });
+                
+                loadMyCrops();
+                simulateWateringTasks();
+            }
+        });
+        
+        async function loadMyCrops() {
+            if (!appState.currentFarmer) return;
+            
+            const container = document.getElementById('cropsList');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/farmers/${appState.currentFarmer.phone}/crops`);
+                const data = await response.json();
+                
+                if (data.success && data.crops.length > 0) {
+                    appState.crops = data.crops;
+                    displayCropsList(data.crops);
+                } else {
+                    displayNoCrops();
+                }
+            } catch (error) {
+                console.log('Using demo crops data');
+                displayCropsList(appState.crops);
+            }
+            
+            // Update stats
+            document.getElementById('totalCrops').textContent = appState.crops.length;
+        }
+        
+        function displayCropsList(crops) {
+            const container = document.getElementById('cropsList');
+            
+            if (crops.length === 0) {
+                displayNoCrops();
+                return;
+            }
+            
+            container.innerHTML = crops.map(crop => `
+                <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h4 class="font-bold text-gray-800">${crop.swahili_name || crop.crop_name}</h4>
+                            <p class="text-sm text-gray-600">
+                                Planted: ${new Date(crop.planting_date).toLocaleDateString()} | 
+                                Area: ${crop.area_acres} acres
+                            </p>
+                        </div>
+                        <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                            ${crop.status || 'growing'}
+                        </span>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-500">
+                        <span>Days: ${crop.growth_days || '--'}</span>
+                        <span>Harvest: ${crop.expected_harvest ? new Date(crop.expected_harvest).toLocaleDateString() : '--'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function displayNoCrops() {
+            const container = document.getElementById('cropsList');
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-seedling text-3xl mb-3 opacity-50"></i>
+                    <p>No crops added yet. Add your first crop above.</p>
+                </div>
+            `;
+        }
+        
+        // ==================== WATERING SCHEDULE ====================
+        async function loadWateringTasks() {
+            if (!appState.currentFarmer) return;
+            
+            const container = document.getElementById('wateringTasks');
+            const countEl = document.getElementById('wateringCount');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/farmers/${appState.currentFarmer.phone}/watering/today`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    appState.wateringTasks = data.schedule || [];
+                    displayWateringTasks(data.schedule);
+                    countEl.textContent = data.schedule.length;
+                }
+            } catch (error) {
+                console.log('Using demo watering tasks');
+                simulateWateringTasks();
+            }
+        }
+        
+        function displayWateringTasks(tasks) {
+            const container = document.getElementById('wateringTasks');
+            
+            if (!tasks || tasks.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-6 text-gray-500">
+                        <i class="fas fa-check-circle text-2xl mb-2 opacity-50"></i>
+                        <p>No watering needed today!</p>
+                        <p class="text-sm mt-1">Soil moisture is optimal</p>
+                    </div>
+                `;
+                document.getElementById('wateringCount').textContent = '0';
+                return;
+            }
+            
+            container.innerHTML = tasks.map(task => `
+                <div class="border border-blue-100 bg-blue-50 rounded-lg p-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <strong class="text-blue-800">${task.crop_name || 'Crop'}</strong>
+                        <span class="px-2 py-1 bg-white text-blue-600 text-xs rounded">
+                            ${task.water_amount_mm || 0}mm water
+                        </span>
+                    </div>
+                    <p class="text-sm text-gray-700 mb-2">${task.swahili_message || task.notes || 'Water as scheduled'}</p>
+                    <div class="flex justify-end">
+                        <button type="button" onclick="completeWateringTask(${task.id})" 
+                                class="text-sm bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded transition">
+                            <i class="fas fa-check mr-1"></i>Done
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('wateringCount').textContent = tasks.length;
+        }
+        
+        async function completeWateringTask(taskId) {
+            try {
+                const response = await fetch(`${API_URL}/api/watering/${taskId}/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        actual_water_used: 10 // Example value
+                    })
+                });
+                
+                const data = await response.json();
+                showToast(data.message || 'Watering completed!', 'success');
+                loadWateringTasks();
+            } catch (error) {
+                showToast('Demo: Watering completed!', 'success');
+                // Remove from local state for demo
+                appState.wateringTasks = appState.wateringTasks.filter(t => t.id !== taskId);
+                displayWateringTasks(appState.wateringTasks);
+            }
+        }
+        
+        // ==================== SENSOR READINGS ====================
+        async function loadSensorReadings(phone) {
+            try {
+                const response = await fetch(`${API_URL}/api/farmer/${phone}/readings`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    appState.sensorReadings = data.readings || [];
+                    updateChart(data.readings);
+                }
+            } catch (error) {
+                console.log('Using demo sensor readings');
+                generateDemoReadings();
+            }
+        }
+        
+        // ==================== SYSTEM STATISTICS ====================
+        async function loadSystemStats() {
+            try {
+                const response = await fetch(`${API_URL}/api/health`);
+                const data = await response.json();
+                
+                // Update farmer count (demo)
+                const farmerCount = Math.floor(Math.random() * 50) + 10;
+                document.getElementById('totalFarmers').textContent = farmerCount;
+                
+                // Update water saved (demo)
+                const waterSaved = Math.floor(Math.random() * 5000) + 1000;
+                document.getElementById('waterSaved').textContent = `${waterSaved.toLocaleString()} L`;
+                
+            } catch (error) {
+                // Demo stats
+                document.getElementById('totalFarmers').textContent = '24';
+                document.getElementById('totalCrops').textContent = appState.crops.length;
+                document.getElementById('waterSaved').textContent = '1,250 L';
+            }
+        }
+        
+        // ==================== CHART FUNCTIONS ====================
+        let readingsChart = null;
+        
+        function initializeChart() {
+            const ctx = document.getElementById('readingsChart').getContext('2d');
+            
+            readingsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Soil Moisture %',
+                            data: [],
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Temperature °C',
+                            data: [],
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateChart(readings) {
+            if (!readingsChart || !readings) return;
+            
+            const last10 = readings.slice(-10).reverse();
+            
+            readingsChart.data.labels = last10.map(r => 
+                new Date(r.recorded_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            );
+            
+            readingsChart.data.datasets[0].data = last10.map(r => r.moisture);
+            readingsChart.data.datasets[1].data = last10.map(r => r.temperature || 25);
+            
+            readingsChart.update();
+        }
+        
+        // ==================== DEMO/HELPER FUNCTIONS ====================
+        function generateDemoReadings() {
+            const demoReadings = [];
+            const now = new Date();
+            
+            for (let i = 0; i < 10; i++) {
+                const time = new Date(now.getTime() - (9 - i) * 3600000); // Last 10 hours
+                demoReadings.push({
+                    moisture: 40 + Math.random() * 30,
+                    temperature: 22 + Math.random() * 10,
+                    recorded_at: time.toISOString()
+                });
+            }
+            
+            appState.sensorReadings = demoReadings;
+            updateChart(demoReadings);
+        }
+        
+        function simulateWateringTasks() {
+            if (appState.crops.length === 0) return;
+            
+            const demoTasks = appState.crops.map((crop, index) => ({
+                id: Date.now() + index,
+                crop_name: crop.swahili_name || crop.crop_name,
+                water_amount_mm: 15 + Math.random() * 10,
+                swahili_message: `Umwagia ${crop.swahili_name || crop.crop_name} leo asubuhi.`,
+                notes: 'Scheduled watering'
+            }));
+            
+            appState.wateringTasks = demoTasks;
+            displayWateringTasks(demoTasks);
+        }
+        
+        function simulateSensor() {
+            if (!appState.currentFarmer) {
+                showToast('Please register first to test sensor', 'warning');
+                return;
+            }
+            
+            const moisture = Math.floor(Math.random() * 30) + 40;
+            const temp = Math.floor(Math.random() * 10) + 22;
+            
+            // Add to readings
+            appState.sensorReadings.push({
+                moisture: moisture,
+                temperature: temp,
+                recorded_at: new Date().toISOString()
+            });
+            
+            // Keep only last 20 readings
+            if (appState.sensorReadings.length > 20) {
+                appState.sensorReadings = appState.sensorReadings.slice(-20);
+            }
+            
+            updateChart(appState.sensorReadings);
+            
+            showToast(`Sensor reading: ${moisture}% moisture, ${temp}°C`, 'success');
+            
+            // Update watering schedule if needed
+            if (moisture < 45) {
+                showToast('Soil is dry! Check watering schedule.', 'warning');
+            }
+        }
+        
+        function checkHealth() {
+            showStatus('Checking system health...', 'info');
+            setTimeout(() => {
+                if (appState.backendConnected) {
+                    showStatus('All systems operational!', 'success');
+                } else {
+                    showStatus('Running in demo mode. Backend offline.', 'warning');
+                }
+            }, 1000);
+        }
+        
+        function showDemoSMS() {
+            const messages = [
+                "Udongo umekauka (45%). Umwagie maji kesho asubuhi.",
+                "Tahadhari: Mvua inatarajiwa. Usiumwagie maji leo.",
+                "Mbolea inahitajika. Panga kupanda mbolea wiki ijayo.",
+                "Joto kali leo! Umwagie maji asubuhi mapema.",
+                "Mazao yako yanakua vizuri. Endelea na mazoea mazuri."
+            ];
+            
+            const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+            
+            showToast(`SMS Demo: ${randomMsg}`, 'info');
+        }
+        
+        function resetDemo() {
+            if (confirm('Reset all demo data? This will clear your local data.')) {
+                localStorage.removeItem('kenyaFarm_farmer');
+                appState.currentFarmer = null;
+                appState.crops = [];
+                appState.wateringTasks = [];
+                
+                document.getElementById('cropsSection').classList.add('hidden');
+                document.getElementById('wateringSection').classList.add('hidden');
+                document.getElementById('registrationResult').classList.add('hidden');
+                
+                displayNoCrops();
+                generateDemoReadings();
+                
+                showToast('Demo data reset successfully', 'success');
+            }
+        }
+        
+        function toggleTheme() {
+            document.body.classList.toggle('bg-gray-900');
+            document.body.classList.toggle('text-white');
+        }
+        
+        // ==================== UTILITY FUNCTIONS ====================
+        async function fetchWithTimeout(resource, options = {}) {
+            const { timeout = 8000 } = options;
+            
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            
+            const response = await fetch(resource, {
+                ...options,
+                signal: controller.signal  
+            });
+            
+            clearTimeout(id);
+            return response;
+        }
+        
+        function showStatus(message, type = 'info') {
+            const banner = document.getElementById('statusBanner');
+            const messageEl = document.getElementById('statusMessage');
+            const detailsEl = document.getElementById('statusDetails');
+            
+            // Set colors based on type
+            const colors = {
+                info: 'bg-blue-50 border-blue-200 text-blue-800',
+                success: 'bg-green-50 border-green-200 text-green-800',
+                warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+                error: 'bg-red-50 border-red-200 text-red-800'
+            };
+            
+            banner.className = `p-4 rounded-lg mb-6 ${colors[type]}`;
+            messageEl.textContent = message;
+            detailsEl.textContent = new Date().toLocaleTimeString();
+            
+            banner.classList.remove('hidden');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                banner.classList.add('hidden');
+            }, 5000);
+        }
+        
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            
+            const toast = document.createElement('div');
+            toast.className = `toast p-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-64 opacity-0 ${getToastClass(type)}`;
+            
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${getToastIcon(type)} mr-3 text-lg"></i>
+                    <div>
+                        <p class="font-medium">${message}</p>
+                        <p class="text-sm opacity-75">${new Date().toLocaleTimeString()}</p>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-64', 'opacity-0');
+            }, 10);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-64', 'opacity-0');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 5000);
+        }
+        
+        function getToastClass(type) {
+            switch(type) {
+                case 'success': return 'bg-green-500 text-white';
+                case 'error': return 'bg-red-500 text-white';
+                case 'warning': return 'bg-yellow-500 text-white';
+                default: return 'bg-blue-500 text-white';
+            }
+        }
+        
+        function getToastIcon(type) {
+            switch(type) {
+                case 'success': return 'fa-check-circle';
+                case 'error': return 'fa-exclamation-circle';
+                case 'warning': return 'fa-exclamation-triangle';
+                default: return 'fa-info-circle';
+            }
+        }
+    </script>
 </body>
 </html>

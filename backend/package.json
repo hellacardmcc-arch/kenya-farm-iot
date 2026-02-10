@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "set PORT=3001&& nodemon src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "db:reset": "ts-node scripts/reset-db.ts"
   },
   "dependencies": {
     "@types/pg": "^8.16.0",
