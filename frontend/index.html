@@ -8,5 +8,44 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
+  <script>
+    // USSD simulation for feature phones
+    function showUSSDMenu() {
+      const menu = `
+        *384*85#
+        
+        1. Check soil moisture
+        2. Last reading
+        3. Water advice
+        4. Register complaint
+        0. Exit
+        
+        Enter choice:
+      `;
+      
+      const choice = prompt(menu);
+      handleUSSDChoice(choice);
+    }
+
+    function handleUSSDChoice(choice) {
+      switch (choice) {
+        case '1':
+          alert('Current moisture: 45% (Moderate)');
+          break;
+        case '2':
+          alert('Last reading: 42% at 2:30 PM');
+          break;
+        case '3':
+          alert('Water tomorrow morning');
+          break;
+        case '4':
+          const complaint = prompt('Describe issue:');
+          alert("Complaint registered. We'll call you.");
+          break;
+        default:
+          alert('Exiting USSD');
+      }
+    }
+  </script>
 </body>
 </html>

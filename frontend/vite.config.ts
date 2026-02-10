@@ -6,5 +6,11 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-  }
+  },
+  server: {
+    historyApiFallback: true, // serve index.html for unknown paths (fixes 404 on refresh)
+  },
+  preview: {
+    historyApiFallback: true, // same for npm run preview
+  },
 });

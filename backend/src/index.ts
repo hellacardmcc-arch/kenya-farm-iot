@@ -3,6 +3,8 @@ import cors from 'cors';
 import { log, logError } from './utils/logger';
 import { SMSService } from './services/sms.service';
 import { validateFarmerRegistration } from './middleware/validation';
+import { runMigrations } from './db/migrations';
+import { AuthService } from './services/auth.service';
 
 const app = express();
 app.use(cors());
@@ -10,6 +12,15 @@ app.use(express.json());
 
 const farmers: { id: number; phone: string; name: string; county: string; createdAt: Date }[] = [];
 const readings: { id: number; phone: string; moisture: number; temperature?: number; recordedAt: Date }[] = [];
+
+app.get('/', (_req, res) => {
+  res.json({
+    service: 'Kenya Farm IoT API',
+    docs: 'Use /api/health, /api/status, POST /api/farmers/register, etc.',
+    health: '/api/health',
+    status: '/api/status'
+  });
+});
 
 app.get('/api/health', (_req, res) => {
   res.json({
@@ -34,6 +45,59 @@ app.get('/api/status', (_req, res) => {
     timestamp: currentTime.toISOString(),
     region: 'Kenya'
   });
+});
+
+// Request OTP
+app.post('/api/auth/request-otp', async (req, res) => {
+  const { phone } = req.body;
+  
+  if (!phone || !/^07[0-9]{8}$/.test(phone)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid phone number'
+    });
+  }
+  
+  const otp = AuthService.generateOTP();
+  const stored = await AuthService.storeOTP(phone, otp);
+  
+  if (stored) {
+    // In production, send via SMS
+    console.log(`OTP for ${phone}: ${otp}`);
+    
+    res.json({
+      success: true,
+      message: 'OTP generated (check console for development)'
+    });
+  } else {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate OTP'
+    });
+  }
+});
+
+// Verify OTP
+app.post('/api/auth/verify-otp', async (req, res) => {
+  const { phone, otp } = req.body;
+  
+  const isValid = await AuthService.verifyOTP(phone, otp);
+  
+  if (isValid) {
+    // Generate simple token
+    const token = Buffer.from(`${phone}:${Date.now()}`).toString('base64');
+    
+    res.json({
+      success: true,
+      token: token,
+      message: 'Authentication successful'
+    });
+  } else {
+    res.status(401).json({
+      success: false,
+      message: 'Invalid or expired OTP'
+    });
+  }
 });
 
 app.post('/api/farmers/register', validateFarmerRegistration, async (req, res) => {
@@ -129,8 +193,24 @@ app.get('/api/admin/data', (_req, res) => {
 });
 
 const PORT = Number(process.env.PORT) || 3000;
-app.listen(PORT, () => {
-  console.log(`✅ Kenya Farm IoT MVP running on port ${PORT}`);
-  console.log(`📍 No database needed for MVP`);
-  console.log(`📍 Data resets on restart - add database later`);
+
+async function startServer() {
+  try {
+    await runMigrations();
+    log('Database migrations ran successfully');
+  } catch (error) {
+    logError(error, 'runMigrations');
+    log('Continuing with in-memory mode (database optional for MVP)');
+  }
+
+  app.listen(PORT, () => {
+    console.log(`✅ Kenya Farm IoT MVP running on port ${PORT}`);
+    console.log(`📍 No database needed for MVP (DB optional, used when configured)`);
+    console.log(`📍 Data resets on restart for in-memory storage`);
+  });
+}
+
+startServer().catch((error) => {
+  logError(error, 'startServer');
+  process.exit(1);
 });
