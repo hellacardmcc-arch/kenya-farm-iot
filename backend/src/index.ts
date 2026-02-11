@@ -4,7 +4,10 @@ import cors from 'cors';
 import { pool, testConnection } from './db';
 import { runMigrations } from './db/migrations';
 import { seedCrops } from './seed/crops.seed';
+import { seedAdmin } from './seed/admin.seed';
 import { validateFarmerRegistration } from './middleware/validation';
+import adminAuthRouter from './routes/admin-auth';
+import adminRouter from './routes/admin';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -57,6 +60,7 @@ async function initDb() {
     await ensureFarmersTable();
     await runMigrations();
     await seedCrops();
+    await seedAdmin();
     dbConnected = true;
     console.log('Database connected and migrations/seeds applied.');
   } catch (err) {
@@ -300,6 +304,9 @@ app.get('/api/farmer/:phone/readings', async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to load readings.' });
   }
 });
+
+app.use('/api/admin', adminAuthRouter);
+app.use('/api/admin', adminRouter);
 
 app.get('/', (_req, res) => {
   res.send('Kenya Farm IoT API. Use /api/health for status.');

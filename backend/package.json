@@ -6,20 +6,27 @@
     "start": "node dist/index.js",
     "dev": "set PORT=3001&& nodemon src/index.ts",
     "build": "tsc",
-    "db:reset": "ts-node scripts/reset-db.ts"
+    "db:reset": "ts-node scripts/reset-db.ts",
+    "db:seed-admin": "ts-node scripts/seed-admin.ts"
   },
   "dependencies": {
     "@types/pg": "^8.16.0",
     "africastalking": "^0.7.8",
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.4",
     "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^8.0.1",
     "pg": "^8.18.0"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.15",
     "@types/express": "^4.17.20",
+    "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.5",
+    "@types/nodemailer": "^7.0.9",
     "nodemon": "^3.0.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"

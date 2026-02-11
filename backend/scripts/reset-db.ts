@@ -13,8 +13,14 @@ const DROP_ORDER = [
   'feedback',
   'otps',
   'alerts',
+  'admin_logs',
+  'sms_logs',
   'sensor_readings',
   'farmers',
+  'system_settings',
+  'admin_password_resets',
+  'admin_email_verifications',
+  'admins',
   'migrations',
 ];
 

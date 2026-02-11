@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kenya Farm IoT - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Admin theme */
+        .admin-sidebar {
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+        }
+        .stat-card {
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        .table-row:hover {
+            background-color: #f8fafc;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            color: #94a3b8;
+            text-decoration: none;
+            transition: background 0.2s, color 0.2s;
+        }
+        .nav-item:hover {
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+        }
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border-left: 3px solid #3b82f6;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Admin Login Screen -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <!-- Tabs for Login Methods -->
+            <div class="flex border-b">
+                <button type="button" id="tabPassword" class="flex-1 py-2 px-4 font-medium border-b-2 border-blue-500 text-blue-600">
+                    <i class="fas fa-key mr-2"></i>Password Login
+                </button>
+                <button type="button" id="tabOTP" class="flex-1 py-2 px-4 font-medium text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-envelope mr-2"></i>Email OTP Login
+                </button>
+            </div>
+
+            <!-- Password Login Form -->
+            <div id="passwordLogin" class="space-y-6">
+                <div>
+                    <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                        🇰🇪 Admin Login
+                    </h2>
+                    <p class="mt-2 text-center text-sm text-gray-600">
+                        Sign in with your credentials
+                    </p>
+                </div>
+
+                <form id="loginForm" class="mt-8 space-y-6">
+                    <div class="rounded-md shadow-sm -space-y-px">
+                        <div>
+                            <label for="username" class="sr-only">Username</label>
+                            <input id="username" name="username" type="text" required
+                                   class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                   placeholder="Username" value="admin">
+                        </div>
+                        <div>
+                            <label for="password" class="sr-only">Password</label>
+                            <input id="password" name="password" type="password" required
+                                   class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                   placeholder="Password" value="admin123">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm">
+                            <a href="#" onclick="showForgotPassword(); return false;" class="font-medium text-blue-600 hover:text-blue-500">
+                                Forgot your password?
+                            </a>
+                        </div>
+                        <div class="text-sm">
+                            <a href="#" onclick="showRegistration(); return false;" class="font-medium text-green-600 hover:text-green-500">
+                                Need an account?
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button type="submit"
+                                class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <span id="loginBtnText">Sign in</span>
+                            <span id="loginBtnLoading" class="hidden">
+                                <i class="fas fa-spinner fa-spin ml-2"></i>
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- OTP Login Form (Hidden by default) -->
+            <div id="otpLogin" class="space-y-6 hidden">
+                <div>
+                    <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                        <i class="fas fa-envelope mr-2"></i>OTP Login
+                    </h2>
+                    <p class="mt-2 text-center text-sm text-gray-600">
+                        Receive a one-time code via email
+                    </p>
+                </div>
+
+                <form id="otpLoginForm" class="mt-8 space-y-6">
+                    <div>
+                        <label for="otpEmail" class="sr-only">Email Address</label>
+                        <input id="otpEmail" name="email" type="email" required
+                               class="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="Enter your email">
+                    </div>
+
+                    <div id="otpCodeSection" class="hidden">
+                        <label for="otpCode" class="sr-only">OTP Code</label>
+                        <input id="otpCode" name="otp" type="text" required
+                               class="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="Enter 6-digit OTP">
+                        <input type="hidden" id="otpToken">
+                    </div>
+
+                    <div>
+                        <button type="submit" id="otpSubmitBtn"
+                                class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            <span id="otpBtnText">Send OTP</span>
+                            <span id="otpBtnLoading" class="hidden">
+                                <i class="fas fa-spinner fa-spin ml-2"></i>
+                            </span>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="text-center">
+                    <button type="button" onclick="switchToPasswordLogin()" class="text-sm text-blue-600 hover:text-blue-500">
+                        <i class="fas fa-arrow-left mr-1"></i>Back to password login
+                    </button>
+                </div>
+            </div>
+
+            <!-- Forgot Password Form (Hidden) -->
+            <div id="forgotPasswordForm" class="space-y-6 hidden">
+                <div>
+                    <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                        <i class="fas fa-key mr-2"></i>Reset Password
+                    </h2>
+                    <p class="mt-2 text-center text-sm text-gray-600">
+                        Enter your email to receive reset instructions
+                    </p>
+                </div>
+
+                <form id="resetPasswordForm" class="mt-8 space-y-6">
+                    <div>
+                        <label for="resetEmail" class="sr-only">Email Address</label>
+                        <input id="resetEmail" name="email" type="email" required
+                               class="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="Enter your email">
+                    </div>
+
+                    <div>
+                        <button type="submit"
+                                class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
+                            <span id="resetBtnText">Send Reset Link</span>
+                            <span id="resetBtnLoading" class="hidden">
+                                <i class="fas fa-spinner fa-spin ml-2"></i>
+                            </span>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="text-center">
+                    <button type="button" onclick="switchToPasswordLogin()" class="text-sm text-blue-600 hover:text-blue-500">
+                        <i class="fas fa-arrow-left mr-1"></i>Back to login
+                    </button>
+                </div>
+            </div>
+
+            <!-- Registration Invitation (Hidden) -->
+            <div id="registrationForm" class="space-y-6 hidden">
+                <div>
+                    <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                        <i class="fas fa-user-plus mr-2"></i>Request Admin Access
+                    </h2>
+                    <p class="mt-2 text-center text-sm text-gray-600">
+                        Request an invitation to join the admin portal
+                    </p>
+                </div>
+
+                <form id="requestInvitationForm" class="mt-8 space-y-6">
+                    <div>
+                        <label for="inviteEmail" class="sr-only">Your Email</label>
+                        <input id="inviteEmail" name="email" type="email" required
+                               class="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="Your email address">
+                    </div>
+
+                    <div>
+                        <label for="inviteMessage" class="sr-only">Message to Super Admin</label>
+                        <textarea id="inviteMessage" rows="3"
+                               class="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="Why do you need admin access?"></textarea>
+                    </div>
+
+                    <div>
+                        <button type="submit"
+                                class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            <span id="inviteBtnText">Request Invitation</span>
+                            <span id="inviteBtnLoading" class="hidden">
+                                <i class="fas fa-spinner fa-spin ml-2"></i>
+                            </span>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="text-center">
+                    <button type="button" onclick="switchToPasswordLogin()" class="text-sm text-blue-600 hover:text-blue-500">
+                        <i class="fas fa-arrow-left mr-1"></i>Back to login
+                    </button>
+                </div>
+            </div>
+
+            <!-- Demo Credentials -->
+            <div class="text-center text-sm text-gray-500">
+                <p>Demo credentials: admin / admin123</p>
+                <p class="mt-2 text-xs">Super admin can create new accounts</p>
+            </div>
+
+            <!-- Error/Success Messages -->
+            <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"></div>
+            <div id="loginSuccess" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded"></div>
+        </div>
+    </div>
+
+    <!-- Main Admin Dashboard (Hidden until login) -->
+    <div id="adminDashboard" class="hidden min-h-screen">
+        <!-- Sidebar -->
+        <div class="admin-sidebar text-white w-64 fixed h-full overflow-y-auto">
+            <div class="p-6">
+                <h1 class="text-xl font-bold flex items-center">
+                    <i class="fas fa-tractor mr-2"></i>
+                    <span>Farm IoT Admin</span>
+                </h1>
+                <p class="text-gray-400 text-sm mt-1" id="adminGreeting">Loading...</p>
+            </div>
+            
+            <nav class="mt-6">
+                <a href="#" onclick="showDashboard(); return false;" class="nav-item active">
+                    <i class="fas fa-chart-line mr-3"></i> Dashboard
+                </a>
+                <a href="#" onclick="showProfile(); return false;" class="nav-item">
+                    <i class="fas fa-user mr-3"></i> Profile
+                </a>
+                <a href="#" onclick="showFarmers(); return false;" class="nav-item">
+                    <i class="fas fa-users mr-3"></i> Farmers
+                </a>
+                <a href="#" onclick="showCrops()" class="nav-item">
+                    <i class="fas fa-seedling mr-3"></i> Crops
+                </a>
+                <a href="#" onclick="showSensors()" class="nav-item">
+                    <i class="fas fa-microchip mr-3"></i> Sensor Data
+                </a>
+                <a href="#" onclick="showSMS()" class="nav-item">
+                    <i class="fas fa-sms mr-3"></i> SMS Logs
+                </a>
+                <a href="#" onclick="showSettings()" class="nav-item">
+                    <i class="fas fa-cog mr-3"></i> Settings
+                </a>
+                <a href="#" onclick="showActivityLogs()" class="nav-item">
+                    <i class="fas fa-history mr-3"></i> Activity Logs
+                </a>
+                
+                <!-- Super Admin Only -->
+                <div id="superAdminMenu" class="hidden">
+                    <div class="px-6 py-2 text-xs text-gray-400 uppercase tracking-wider">Super Admin</div>
+                    <a href="#" onclick="showAdmins()" class="nav-item">
+                        <i class="fas fa-user-shield mr-3"></i> Admin Users
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Profile Section in Sidebar -->
+            <div class="px-6 py-4 border-t border-gray-800">
+                <a href="#" onclick="showProfile(); return false;" class="flex items-center text-gray-300 hover:text-white">
+                    <i class="fas fa-user-circle mr-3"></i>
+                    <div class="flex-1">
+                        <p id="sidebarUsername" class="font-medium">Loading...</p>
+                        <p id="sidebarRole" class="text-xs text-gray-400">Loading...</p>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-500"></i>
+                </a>
+            </div>
+
+            <div class="absolute bottom-0 w-full p-4 border-t border-gray-800">
+                <button type="button" onclick="logout()" class="flex items-center text-gray-400 hover:text-white w-full">
+                    <i class="fas fa-sign-out-alt mr-3"></i> Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="ml-64 p-6">
+            <!-- Top Bar -->
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="pageTitle" class="text-2xl font-bold text-gray-800">Dashboard</h2>
+                <div class="flex items-center space-x-4">
+                    <span id="lastUpdate" class="text-sm text-gray-500">Loading...</span>
+                    <button type="button" onclick="refreshData()" class="p-2 text-gray-600 hover:text-blue-600">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button type="button" onclick="exportData()" class="bg-green-600 text-white px-4 py-2 rounded text-sm">
+                        <i class="fas fa-download mr-2"></i>Export
+                    </button>
+                </div>
+            </div>
+
+            <!-- Page Content -->
+            <div id="pageContent">
+                <!-- Dashboard content will be loaded here -->
+                <div class="text-center py-12">
+                    <i class="fas fa-spinner fa-spin text-3xl text-blue-500 mb-4"></i>
+                    <p class="text-gray-600">Loading dashboard...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Modal Container -->
+    <div id="modalContainer"></div>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        const API_URL = (window.location.hostname === 'localhost') ? 'http://localhost:3001' : 'https://kenya-farm-backend.onrender.com';
+        const ADMIN_TOKEN_KEY = 'kenyaFarm_adminToken';
+        const ADMIN_DATA_KEY = 'kenyaFarm_adminData';
+        
+        // ==================== STATE MANAGEMENT ====================
+        let currentAdmin = null;
+        let currentPage = 'dashboard';
+        
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedToken = localStorage.getItem(ADMIN_TOKEN_KEY);
+            const savedAdmin = localStorage.getItem(ADMIN_DATA_KEY);
+
+            if (savedToken && savedAdmin) {
+                currentAdmin = JSON.parse(savedAdmin);
+                showAdminDashboard();
+                loadDashboard();
+            }
+
+            // Login tabs
+            document.getElementById('tabOTP').addEventListener('click', showOTPLogin);
+            document.getElementById('tabPassword').addEventListener('click', switchToPasswordLogin);
+
+            // OTP login form
+            document.getElementById('otpLoginForm').addEventListener('submit', handleOtpLoginSubmit);
+
+            // Reset password form
+            document.getElementById('resetPasswordForm').addEventListener('submit', handleResetPasswordSubmit);
+
+            // Request invitation form
+            document.getElementById('requestInvitationForm').addEventListener('submit', handleRequestInvitationSubmit);
+        });
+
+        // ==================== LOGIN/REGISTRATION UI FUNCTIONS ====================
+
+        function showOTPLogin() {
+            document.getElementById('tabPassword').classList.remove('border-b-2', 'border-blue-500', 'text-blue-600');
+            document.getElementById('tabPassword').classList.add('text-gray-500');
+            document.getElementById('tabOTP').classList.add('border-b-2', 'border-green-500', 'text-green-600');
+            document.getElementById('tabOTP').classList.remove('text-gray-500');
+
+            document.getElementById('passwordLogin').classList.add('hidden');
+            document.getElementById('otpLogin').classList.remove('hidden');
+            document.getElementById('forgotPasswordForm').classList.add('hidden');
+            document.getElementById('registrationForm').classList.add('hidden');
+            clearMessages();
+        }
+
+        function switchToPasswordLogin() {
+            document.getElementById('tabPassword').classList.add('border-b-2', 'border-blue-500', 'text-blue-600');
+            document.getElementById('tabPassword').classList.remove('text-gray-500');
+            document.getElementById('tabOTP').classList.remove('border-b-2', 'border-green-500', 'text-green-600');
+            document.getElementById('tabOTP').classList.add('text-gray-500');
+
+            document.getElementById('passwordLogin').classList.remove('hidden');
+            document.getElementById('otpLogin').classList.add('hidden');
+            document.getElementById('forgotPasswordForm').classList.add('hidden');
+            document.getElementById('registrationForm').classList.add('hidden');
+            clearMessages();
+        }
+
+        function showForgotPassword() {
+            document.getElementById('passwordLogin').classList.add('hidden');
+            document.getElementById('otpLogin').classList.add('hidden');
+            document.getElementById('forgotPasswordForm').classList.remove('hidden');
+            document.getElementById('registrationForm').classList.add('hidden');
+            clearMessages();
+        }
+
+        function showRegistration() {
+            document.getElementById('passwordLogin').classList.add('hidden');
+            document.getElementById('otpLogin').classList.add('hidden');
+            document.getElementById('forgotPasswordForm').classList.add('hidden');
+            document.getElementById('registrationForm').classList.remove('hidden');
+            clearMessages();
+        }
+
+        function clearMessages() {
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('loginSuccess').classList.add('hidden');
+        }
+
+        function showMessage(message, type) {
+            const errorDiv = document.getElementById('loginError');
+            const successDiv = document.getElementById('loginSuccess');
+
+            if (type === 'error') {
+                errorDiv.textContent = message;
+                errorDiv.classList.remove('hidden');
+                successDiv.classList.add('hidden');
+            } else {
+                successDiv.textContent = message;
+                successDiv.classList.remove('hidden');
+                errorDiv.classList.add('hidden');
+            }
+        }
+
+        // OTP Login state
+        let otpRequested = false;
+        let otpToken = '';
+
+        async function handleOtpLoginSubmit(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('otpEmail').value;
+            const otpCode = document.getElementById('otpCode').value;
+            const btnText = document.getElementById('otpBtnText');
+            const btnLoading = document.getElementById('otpBtnLoading');
+
+            if (!otpRequested) {
+                // Request OTP
+                btnText.classList.add('hidden');
+                btnLoading.classList.remove('hidden');
+
+                try {
+                    const response = await fetch(`${API_URL}/api/admin/login/request-otp`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        otpRequested = true;
+                        otpToken = data.otpToken;
+                        document.getElementById('otpToken').value = data.otpToken;
+                        document.getElementById('otpCodeSection').classList.remove('hidden');
+                        document.getElementById('otpSubmitBtn').classList.remove('bg-green-600');
+                        document.getElementById('otpSubmitBtn').classList.add('bg-blue-600');
+                        btnText.textContent = 'Verify OTP';
+                        showMessage('OTP sent to your email', 'success');
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch (error) {
+                    showMessage(error.message, 'error');
+                } finally {
+                    btnText.classList.remove('hidden');
+                    btnLoading.classList.add('hidden');
+                }
+            } else {
+                // Verify OTP
+                if (!otpCode || otpCode.length !== 6) {
+                    showMessage('Please enter a valid 6-digit OTP', 'error');
+                    return;
+                }
+
+                btnText.classList.add('hidden');
+                btnLoading.classList.remove('hidden');
+
+                try {
+                    const response = await fetch(`${API_URL}/api/admin/login/with-otp`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ otpToken, otp: otpCode })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+                        localStorage.setItem(ADMIN_DATA_KEY, JSON.stringify(data.admin));
+
+                        currentAdmin = data.admin;
+                        showAdminDashboard();
+                        loadDashboard();
+
+                        showToast('Login successful!', 'success');
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch (error) {
+                    showMessage(error.message, 'error');
+                } finally {
+                    btnText.classList.remove('hidden');
+                    btnLoading.classList.add('hidden');
+                }
+            }
+        }
+
+        async function handleResetPasswordSubmit(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('resetEmail').value;
+            const btnText = document.getElementById('resetBtnText');
+            const btnLoading = document.getElementById('resetBtnLoading');
+
+            btnText.classList.add('hidden');
+            btnLoading.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${API_URL}/api/admin/password-reset/request`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(data.message || 'If an account exists, you will receive reset instructions by email.', 'success');
+                    document.getElementById('resetPasswordForm').reset();
+                    setTimeout(switchToPasswordLogin, 3000);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                showMessage(error.message, 'error');
+            } finally {
+                btnText.classList.remove('hidden');
+                btnLoading.classList.add('hidden');
+            }
+        }
+
+        async function handleRequestInvitationSubmit(e) {
+            e.preventDefault();
+
+            const btnText = document.getElementById('inviteBtnText');
+            const btnLoading = document.getElementById('inviteBtnLoading');
+
+            btnText.classList.add('hidden');
+            btnLoading.classList.remove('hidden');
+
+            try {
+                showMessage('Invitation request submitted. A super admin will review your request.', 'success');
+                document.getElementById('requestInvitationForm').reset();
+            } catch (error) {
+                showMessage(error.message, 'error');
+            } finally {
+                btnText.classList.remove('hidden');
+                btnLoading.classList.add('hidden');
+            }
+        }
+
+        async function sendVerificationEmail() {
+            try {
+                showToast('Verification email sent!', 'success');
+            } catch (error) {
+                showToast('Failed to send verification email', 'error');
+            }
+        }
+        
+        // ==================== AUTHENTICATION ====================
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('loginError');
+            const btnText = document.getElementById('loginBtnText');
+            const btnLoading = document.getElementById('loginBtnLoading');
+            
+            btnText.textContent = 'Signing in...';
+            btnLoading.classList.remove('hidden');
+            errorDiv.classList.add('hidden');
+            document.getElementById('loginSuccess').classList.add('hidden');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+                    localStorage.setItem(ADMIN_DATA_KEY, JSON.stringify(data.admin));
+                    currentAdmin = data.admin;
+                    showAdminDashboard();
+                    loadDashboard();
+                    showToast('Login successful!', 'success');
+                } else {
+                    throw new Error(data.message || 'Login failed');
+                }
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.classList.remove('hidden');
+                showToast(error.message, 'error');
+            } finally {
+                btnText.textContent = 'Sign in';
+                btnLoading.classList.add('hidden');
+            }
+        });
+        
+        function showAdminDashboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('adminDashboard').classList.remove('hidden');
+            document.getElementById('adminGreeting').textContent = `Hello, ${currentAdmin.username} (${currentAdmin.role})`;
+            const sidebarUsername = document.getElementById('sidebarUsername');
+            const sidebarRole = document.getElementById('sidebarRole');
+            if (sidebarUsername) sidebarUsername.textContent = currentAdmin.username;
+            if (sidebarRole) sidebarRole.textContent = currentAdmin.role.replace('_', ' ');
+            if (currentAdmin.role === 'super_admin') {
+                document.getElementById('superAdminMenu').classList.remove('hidden');
+            }
+        }
+        
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem(ADMIN_TOKEN_KEY);
+                localStorage.removeItem(ADMIN_DATA_KEY);
+                currentAdmin = null;
+                document.getElementById('loginScreen').classList.remove('hidden');
+                document.getElementById('adminDashboard').classList.add('hidden');
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                showToast('Logged out successfully', 'info');
+            }
+        }
+        
+        // ==================== PAGE NAVIGATION ====================
+        function showDashboard() { navigateTo('dashboard', 'Dashboard'); }
+        function showProfile() { navigateTo('profile', 'My Profile'); }
+        function showFarmers() { navigateTo('farmers', 'Farmers Management'); }
+        function showCrops() { navigateTo('crops', 'Crops Management'); }
+        function showSensors() { navigateTo('sensors', 'Sensor Data'); }
+        function showSMS() { navigateTo('sms', 'SMS Logs'); }
+        function showSettings() { navigateTo('settings', 'System Settings'); }
+        function showActivityLogs() { navigateTo('activity', 'Activity Logs'); }
+        function showAdmins() { navigateTo('admins', 'Admin Users'); }
+        
+        function navigateTo(page, title) {
+            currentPage = page;
+            document.getElementById('pageTitle').textContent = title;
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            switch(page) {
+                case 'dashboard': loadDashboard(); break;
+                case 'profile': loadProfile(); break;
+                case 'farmers': loadFarmers(); break;
+                case 'crops': loadCrops(); break;
+                case 'sensors': loadSensors(); break;
+                case 'sms': loadSMS(); break;
+                case 'settings': loadSettings(); break;
+                case 'activity': loadActivityLogs(); break;
+                case 'admins': loadAdmins(); break;
+            }
+        }
+        
+        // ==================== API HELPER ====================
+        async function adminFetch(endpoint, options = {}) {
+            const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+            const response = await fetch(`${API_URL}/api/admin${endpoint}`, {
+                ...options,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...options.headers }
+            });
+            if (response.status === 401) {
+                logout();
+                throw new Error('Session expired. Please login again.');
+            }
+            return response;
+        }
+        
+        // ==================== DASHBOARD PAGE ====================
+        async function loadDashboard() {
+            const content = document.getElementById('pageContent');
+            content.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="stat-card bg-white rounded-xl shadow p-6">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-gray-600 text-sm">Total Farmers</p>
+                                <p id="statFarmers" class="text-3xl font-bold mt-2">0</p>
+                            </div>
+                            <i class="fas fa-users text-blue-500 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card bg-white rounded-xl shadow p-6">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-gray-600 text-sm">Active Crops</p>
+                                <p id="statCrops" class="text-3xl font-bold mt-2">0</p>
+                            </div>
+                            <i class="fas fa-seedling text-green-500 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card bg-white rounded-xl shadow p-6">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-gray-600 text-sm">Today's Readings</p>
+                                <p id="statReadings" class="text-3xl font-bold mt-2">0</p>
+                            </div>
+                            <i class="fas fa-microchip text-purple-500 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card bg-white rounded-xl shadow p-6">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-gray-600 text-sm">Pending Watering</p>
+                                <p id="statWatering" class="text-3xl font-bold mt-2">0</p>
+                            </div>
+                            <i class="fas fa-tint text-yellow-500 text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h3 class="text-lg font-bold mb-4">County Distribution</h3>
+                        <div id="countyChart" class="h-64"></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h3 class="text-lg font-bold mb-4">Recent Registrations (7 days)</h3>
+                        <div id="registrationsChart" class="h-64"></div>
+                    </div>
+                </div>
+                <div class="mt-6 bg-white rounded-xl shadow p-6">
+                    <h3 class="text-lg font-bold mb-4">Quick Actions</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <button type="button" onclick="showFarmers()" class="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg text-center">
+                            <i class="fas fa-users text-blue-600 text-xl mb-2"></i>
+                            <p class="font-medium">Manage Farmers</p>
+                        </button>
+                        <button type="button" onclick="sendBulkSMS()" class="p-4 bg-green-50 hover:bg-green-100 rounded-lg text-center">
+                            <i class="fas fa-sms text-green-600 text-xl mb-2"></i>
+                            <p class="font-medium">Send Bulk SMS</p>
+                        </button>
+                        <button type="button" onclick="exportReport()" class="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg text-center">
+                            <i class="fas fa-file-export text-purple-600 text-xl mb-2"></i>
+                            <p class="font-medium">Export Report</p>
+                        </button>
+                        <button type="button" onclick="showSettings()" class="p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg text-center">
+                            <i class="fas fa-cog text-yellow-600 text-xl mb-2"></i>
+                            <p class="font-medium">System Settings</p>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            try {
+                const response = await adminFetch('/dashboard/stats');
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('statFarmers').textContent = data.stats.total_farmers.toLocaleString();
+                    document.getElementById('statCrops').textContent = data.stats.active_crops.toLocaleString();
+                    document.getElementById('statReadings').textContent = data.stats.todays_readings.toLocaleString();
+                    document.getElementById('statWatering').textContent = data.stats.pending_watering.toLocaleString();
+                    document.getElementById('lastUpdate').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+                    createCountyChart(data.stats.county_distribution || []);
+                    createRegistrationsChart(data.stats.recent_registrations || []);
+                }
+            } catch (error) {
+                showToast('Failed to load dashboard data', 'error');
+                console.error(error);
+            }
+        }
+        
+        function createCountyChart(countyData) {
+            countyData = countyData || [];
+            const container = document.getElementById('countyChart');
+            if (!container) return;
+            container.innerHTML = '';
+            const ctx = document.createElement('canvas');
+            container.appendChild(ctx);
+            if (typeof Chart === 'undefined') return;
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: countyData.map(c => c.county),
+                    datasets: [{ label: 'Farmers', data: countyData.map(c => c.farmers_count), backgroundColor: '#3b82f6', borderColor: '#2563eb', borderWidth: 1 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+        }
+        
+        function createRegistrationsChart(registrations) {
+            registrations = registrations || [];
+            const container = document.getElementById('registrationsChart');
+            if (!container) return;
+            container.innerHTML = '';
+            const ctx = document.createElement('canvas');
+            container.appendChild(ctx);
+            if (typeof Chart === 'undefined') return;
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: registrations.map(r => new Date(r.date).toLocaleDateString()),
+                    datasets: [{ label: 'Registrations', data: registrations.map(r => r.total), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4, fill: true }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+        }
+        
+        // ==================== FARMERS PAGE ====================
+        async function loadFarmers(page = 1) {
+            const content = document.getElementById('pageContent');
+            content.innerHTML = `
+                <div class="bg-white rounded-xl shadow mb-6">
+                    <div class="p-6 border-b">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+                            <div>
+                                <h3 class="text-lg font-bold">Farmers Management</h3>
+                                <p class="text-gray-600 text-sm">View and manage registered farmers</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <input type="text" id="searchFarmers" placeholder="Search by name or phone..." class="px-4 py-2 border rounded-lg">
+                                <select id="countyFilter" class="px-4 py-2 border rounded-lg">
+                                    <option value="">All Counties</option>
+                                    <option>Nairobi</option><option>Kiambu</option><option>Nakuru</option><option>Kisumu</option>
+                                </select>
+                                <button type="button" onclick="searchFarmers()" class="bg-blue-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-search mr-2"></i>Search</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Farmer</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Crops</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Reading</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="farmersTable" class="divide-y divide-gray-200">
+                                <tr><td colspan="5" class="px-6 py-12 text-center"><i class="fas fa-spinner fa-spin text-2xl text-blue-500 mb-2"></i><p class="text-gray-600">Loading farmers...</p></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-4 border-t flex justify-between items-center">
+                        <div id="farmersPaginationInfo" class="text-sm text-gray-600"></div>
+                        <div class="flex space-x-2">
+                            <button type="button" id="prevPage" onclick="changeFarmersPage(-1)" disabled class="px-4 py-2 border rounded disabled:opacity-50">Previous</button>
+                            <button type="button" id="nextPage" onclick="changeFarmersPage(1)" disabled class="px-4 py-2 border rounded disabled:opacity-50">Next</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            try {
+                const search = document.getElementById('searchFarmers')?.value || '';
+                const county = document.getElementById('countyFilter')?.value || '';
+                const response = await adminFetch(`/farmers?page=${page}&limit=10&search=${encodeURIComponent(search)}&county=${encodeURIComponent(county)}`);
+                const data = await response.json();
+                if (data.success) updateFarmersTable(data);
+            } catch (error) {
+                showToast('Failed to load farmers', 'error');
+            }
+        }
+        
+        function updateFarmersTable(data) {
+            const tbody = document.getElementById('farmersTable');
+            if (!tbody) return;
+            if (data.farmers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center"><i class="fas fa-users-slash text-2xl text-gray-400 mb-2"></i><p class="text-gray-600">No farmers found</p></td></tr>';
+                return;
+            }
+            const escape = (s) => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+            tbody.innerHTML = data.farmers.map(f => `
+                <tr class="table-row hover:bg-gray-50">
+                    <td class="px-6 py-4"><div><p class="font-medium">${escape(f.name)}</p><p class="text-sm text-gray-500">${escape(f.county || '')}</p></div></td>
+                    <td class="px-6 py-4"><p class="font-mono">${escape(f.phone)}</p><p class="text-sm text-gray-500">Joined: ${f.created_at ? new Date(f.created_at).toLocaleDateString() : 'N/A'}</p></td>
+                    <td class="px-6 py-4"><span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">${f.crops_count} crops</span></td>
+                    <td class="px-6 py-4">${f.last_reading ? `<p>${new Date(f.last_reading).toLocaleDateString()}</p><p class="text-xs text-gray-500">${new Date(f.last_reading).toLocaleTimeString()}</p>` : '<p class="text-gray-500">No readings</p>'}</td>
+                    <td class="px-6 py-4"><div class="flex space-x-2">
+                        <button type="button" onclick="viewFarmer(${f.id})" class="text-blue-600 hover:text-blue-800"><i class="fas fa-eye"></i></button>
+                        <button type="button" onclick="sendFarmerSMS(${f.id}, '${String(f.phone).replace(/'/g, "\\'")}')" class="text-green-600 hover:text-green-800"><i class="fas fa-sms"></i></button>
+                    </div></td>
+                </tr>
+            `).join('');
+            const p = data.pagination;
+            const info = document.getElementById('farmersPaginationInfo');
+            const prev = document.getElementById('prevPage');
+            const next = document.getElementById('nextPage');
+            if (info) info.textContent = `Showing ${((p.page - 1) * p.limit) + 1} to ${Math.min(p.page * p.limit, p.total)} of ${p.total} farmers`;
+            if (prev) { prev.disabled = p.page <= 1; prev.dataset.page = p.page; }
+            if (next) { next.disabled = p.page >= p.totalPages; next.dataset.page = p.page; }
+        }
+        
+        function changeFarmersPage(direction) {
+            const prev = document.getElementById('prevPage');
+            loadFarmers((prev ? parseInt(prev.dataset.page, 10) : 1) + direction);
+        }
+        
+        function searchFarmers() { loadFarmers(1); }
+        
+        function viewFarmer(farmerId) {
+            showModal(`<div class="p-6"><h3 class="text-xl font-bold mb-4">Farmer Details</h3><div id="farmerDetails">Loading...</div></div>`);
+            adminFetch(`/farmers/${farmerId}`).then(r => r.json()).then(data => {
+                if (!data.success) return;
+                const farmer = data.farmer;
+                const crops = Array.isArray(farmer.crops) ? farmer.crops : [];
+                const escape = (s) => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+                document.getElementById('farmerDetails').innerHTML = `
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><p class="text-sm text-gray-600">Name</p><p class="font-medium">${escape(farmer.name)}</p></div>
+                            <div><p class="text-sm text-gray-600">Phone</p><p class="font-mono">${escape(farmer.phone)}</p></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><p class="text-sm text-gray-600">County</p><p class="font-medium">${escape(farmer.county || 'N/A')}</p></div>
+                            <div><p class="text-sm text-gray-600">Farm Size</p><p class="font-medium">${farmer.farm_size != null ? farmer.farm_size : 'N/A'} acres</p></div>
+                        </div>
+                        <div><p class="text-sm text-gray-600">Registered</p><p class="font-medium">${farmer.created_at ? new Date(farmer.created_at).toLocaleDateString() : 'N/A'}</p></div>
+                        <div class="mt-6"><h4 class="font-bold mb-2">Crops (${crops.length})</h4>
+                            ${crops.length ? '<div class="space-y-2">' + crops.map(c => `<div class="border p-3 rounded"><p class="font-medium">${escape(c.swahili_name || c.crop_type || '')} (${escape(c.crop_type || '')})</p><p class="text-sm text-gray-600">Planted: ${c.planting_date ? new Date(c.planting_date).toLocaleDateString() : 'N/A'} | Area: ${c.area_acres != null ? c.area_acres : 'N/A'} acres | Status: ${escape(c.status || 'N/A')}</p></div>`).join('') + '</div>' : '<p class="text-gray-500">No crops registered</p>'}
+                        </div>
+                        <div class="mt-6 pt-6 border-t">
+                            <button type="button" onclick="sendFarmerSMS(${farmer.id}, '${String(farmer.phone).replace(/'/g, "\\'")}')" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"><i class="fas fa-sms mr-2"></i>Send SMS to Farmer</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        function sendFarmerSMS(farmerId, phone) {
+            const escape = (s) => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+            showModal(`
+                <div class="p-6">
+                    <h3 class="text-xl font-bold mb-4">Send SMS to Farmer</h3>
+                    <div class="mb-4"><p class="text-sm text-gray-600">To: ${escape(phone)}</p></div>
+                    <textarea id="smsMessage" rows="4" class="w-full p-3 border rounded-lg mb-4" placeholder="Type your message here..."></textarea>
+                    <div class="flex justify-end space-x-2">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 border rounded-lg">Cancel</button>
+                        <button type="button" onclick="sendSMSNow(${farmerId})" class="px-4 py-2 bg-green-600 text-white rounded-lg"><i class="fas fa-paper-plane mr-2"></i>Send SMS</button>
+                    </div>
+                </div>
+            `);
+        }
+        
+        async function sendSMSNow(farmerId) {
+            const message = (document.getElementById('smsMessage') || {}).value || '';
+            if (!message.trim()) { showToast('Please enter a message', 'warning'); return; }
+            try {
+                const response = await adminFetch(`/farmers/${farmerId}/sms`, { method: 'POST', body: JSON.stringify({ message }) });
+                const data = await response.json();
+                if (data.success) { showToast('SMS sent successfully', 'success'); closeModal(); }
+                else throw new Error(data.message);
+            } catch (error) { showToast(error.message, 'error'); }
+        }
+        
+        // ==================== PROFILE MANAGEMENT ====================
+
+        async function loadProfile() {
+            const content = document.getElementById('pageContent');
+            content.innerHTML = `
+                <div class="bg-white rounded-xl shadow">
+                    <!-- Profile Header -->
+                    <div class="p-6 border-b">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-xl font-bold">Profile Settings</h3>
+                                <p class="text-gray-600">Manage your account information</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <span id="emailVerifiedBadge" class="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">
+                                    <i class="fas fa-check-circle mr-1"></i>Email Verified
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="flex border-b">
+                        <button type="button" id="tabProfileInfo" class="px-6 py-3 font-medium border-b-2 border-blue-500 text-blue-600">
+                            <i class="fas fa-user mr-2"></i>Profile Information
+                        </button>
+                        <button type="button" id="tabChangePassword" class="px-6 py-3 font-medium text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-key mr-2"></i>Change Password
+                        </button>
+                        <button type="button" id="tabSecurity" class="px-6 py-3 font-medium text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-shield-alt mr-2"></i>Security
+                        </button>
+                    </div>
+
+                    <!-- Profile Information Tab -->
+                    <div id="profileInfoTab" class="p-6">
+                        <form id="profileForm" class="space-y-6 max-w-2xl">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-user mr-2"></i>Username
+                                    </label>
+                                    <input type="text" id="profileUsername"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                           placeholder="Username">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-envelope mr-2"></i>Email Address
+                                    </label>
+                                    <input type="email" id="profileEmail" disabled
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                                           placeholder="Email">
+                                    <p class="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-phone mr-2"></i>Phone Number
+                                    </label>
+                                    <input type="tel" id="profilePhone"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                           placeholder="Phone number">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-map-marker-alt mr-2"></i>County
+                                    </label>
+                                    <select id="profileCounty"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">Select County</option>
+                                        <option value="Nairobi">Nairobi</option>
+                                        <option value="Kiambu">Kiambu</option>
+                                        <option value="Nakuru">Nakuru</option>
+                                        <option value="Kisumu">Kisumu</option>
+                                        <option value="Mombasa">Mombasa</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-user-tag mr-2"></i>Role
+                                </label>
+                                <input type="text" id="profileRole" disabled
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                                       placeholder="Role">
+                            </div>
+
+                            <div class="pt-4 border-t">
+                                <button type="submit"
+                                        class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <span id="saveProfileBtnText">Save Changes</span>
+                                    <span id="saveProfileBtnLoading" class="hidden">
+                                        <i class="fas fa-spinner fa-spin ml-2"></i>
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Change Password Tab -->
+                    <div id="changePasswordTab" class="p-6 hidden">
+                        <form id="changePasswordForm" class="space-y-6 max-w-2xl">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-key mr-2"></i>Current Password
+                                </label>
+                                <input type="password" id="currentPassword"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="Enter current password" required>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-lock mr-2"></i>New Password
+                                </label>
+                                <input type="password" id="newPassword"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="Enter new password" required>
+                                <p class="text-xs text-gray-500 mt-1">Must be at least 8 characters</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-lock mr-2"></i>Confirm New Password
+                                </label>
+                                <input type="password" id="confirmPassword"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="Confirm new password" required>
+                            </div>
+
+                            <div class="pt-4">
+                                <button type="submit"
+                                        class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                                    <span id="changePasswordBtnText">Change Password</span>
+                                    <span id="changePasswordBtnLoading" class="hidden">
+                                        <i class="fas fa-spinner fa-spin ml-2"></i>
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Security Tab -->
+                    <div id="securityTab" class="p-6 hidden">
+                        <div class="space-y-6 max-w-2xl">
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                <h4 class="font-bold text-yellow-800 mb-2">
+                                    <i class="fas fa-shield-alt mr-2"></i>Security Information
+                                </h4>
+                                <p class="text-sm text-yellow-700">
+                                    Last login: <span id="lastLoginTime">Loading...</span><br>
+                                    Account created: <span id="accountCreated">Loading...</span>
+                                </p>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-gray-800 mb-4">Email Verification</h4>
+                                <div id="emailVerificationStatus" class="flex items-center">
+                                    <i class="fas fa-spinner fa-spin text-blue-500 mr-3"></i>
+                                    <span>Loading verification status...</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-gray-800 mb-4">Two-Factor Authentication</h4>
+                                <p class="text-gray-600 mb-4">Add an extra layer of security to your account.</p>
+                                <button type="button" onclick="enable2FA()" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                                    <i class="fas fa-mobile-alt mr-2"></i>Enable 2FA
+                                </button>
+                            </div>
+
+                            <div class="pt-6 border-t">
+                                <button type="button" onclick="showSessions()" class="text-blue-600 hover:text-blue-800 mr-4">
+                                    <i class="fas fa-desktop mr-2"></i>View Active Sessions
+                                </button>
+                                <button type="button" onclick="logoutAllSessions()" class="text-red-600 hover:text-red-800">
+                                    <i class="fas fa-sign-out-alt mr-2"></i>Logout All Sessions
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            await loadProfileData();
+            setupProfileTabs();
+        }
+
+        async function loadProfileData() {
+            try {
+                const response = await adminFetch('/profile');
+                const data = await response.json();
+
+                if (data.success) {
+                    const profile = data.profile;
+
+                    const usernameEl = document.getElementById('profileUsername');
+                    const emailEl = document.getElementById('profileEmail');
+                    const phoneEl = document.getElementById('profilePhone');
+                    const countyEl = document.getElementById('profileCounty');
+                    const roleEl = document.getElementById('profileRole');
+                    if (usernameEl) usernameEl.value = profile.username || '';
+                    if (emailEl) emailEl.value = profile.email || '';
+                    if (phoneEl) phoneEl.value = profile.phone || '';
+                    if (countyEl) countyEl.value = profile.county || '';
+                    if (roleEl) roleEl.value = profile.role || '';
+
+                    const sidebarUsername = document.getElementById('sidebarUsername');
+                    const sidebarRole = document.getElementById('sidebarRole');
+                    if (sidebarUsername) sidebarUsername.textContent = profile.username || '';
+                    if (sidebarRole) sidebarRole.textContent = (profile.role || '').replace('_', ' ');
+
+                    const badge = document.getElementById('emailVerifiedBadge');
+                    if (badge) {
+                        if (profile.email_verified) {
+                            badge.innerHTML = '<i class="fas fa-check-circle mr-1"></i>Email Verified';
+                            badge.className = 'px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full';
+                        } else {
+                            badge.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>Email Not Verified';
+                            badge.className = 'px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full';
+                        }
+                    }
+
+                    const lastLoginEl = document.getElementById('lastLoginTime');
+                    const accountCreatedEl = document.getElementById('accountCreated');
+                    if (lastLoginEl) lastLoginEl.textContent = profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never';
+                    if (accountCreatedEl) accountCreatedEl.textContent = profile.created_at ? new Date(profile.created_at).toLocaleDateString() : '—';
+
+                    const statusDiv = document.getElementById('emailVerificationStatus');
+                    if (statusDiv) {
+                        if (profile.email_verified) {
+                            statusDiv.innerHTML = `
+                                <i class="fas fa-check-circle text-green-500 mr-3 text-xl"></i>
+                                <div>
+                                    <p class="font-medium">Email verified</p>
+                                    <p class="text-sm text-gray-600">Verified on ${profile.created_at ? new Date(profile.created_at).toLocaleDateString() : '—'}</p>
+                                </div>
+                            `;
+                        } else {
+                            statusDiv.innerHTML = `
+                                <i class="fas fa-exclamation-triangle text-yellow-500 mr-3 text-xl"></i>
+                                <div>
+                                    <p class="font-medium">Email not verified</p>
+                                    <p class="text-sm text-gray-600">
+                                        <button type="button" onclick="sendVerificationEmail()" class="text-blue-600 hover:text-blue-800">
+                                            Resend verification email
+                                        </button>
+                                    </p>
+                                </div>
+                            `;
+                        }
+                    }
+                }
+            } catch (error) {
+                showToast('Failed to load profile data', 'error');
+            }
+        }
+
+        function setupProfileTabs() {
+            const tabs = {
+                'tabProfileInfo': 'profileInfoTab',
+                'tabChangePassword': 'changePasswordTab',
+                'tabSecurity': 'securityTab'
+            };
+
+            Object.entries(tabs).forEach(([tabId, contentId]) => {
+                const tabEl = document.getElementById(tabId);
+                if (!tabEl) return;
+                tabEl.addEventListener('click', (e) => {
+                    e.preventDefault();
+
+                    Object.keys(tabs).forEach(id => {
+                        const tab = document.getElementById(id);
+                        const content = document.getElementById(tabs[id]);
+                        if (!tab || !content) return;
+
+                        if (id === tabId) {
+                            tab.classList.add('border-b-2', 'border-blue-500', 'text-blue-600');
+                            tab.classList.remove('text-gray-500');
+                            content.classList.remove('hidden');
+                        } else {
+                            tab.classList.remove('border-b-2', 'border-blue-500', 'text-blue-600');
+                            tab.classList.add('text-gray-500');
+                            content.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+
+            const profileForm = document.getElementById('profileForm');
+            if (profileForm) {
+                profileForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    const btnText = document.getElementById('saveProfileBtnText');
+                    const btnLoading = document.getElementById('saveProfileBtnLoading');
+                    if (btnText) btnText.classList.add('hidden');
+                    if (btnLoading) btnLoading.classList.remove('hidden');
+
+                    try {
+                        const updates = {
+                            username: document.getElementById('profileUsername').value,
+                            phone: document.getElementById('profilePhone').value,
+                            county: document.getElementById('profileCounty').value
+                        };
+
+                        const response = await adminFetch('/profile', {
+                            method: 'PUT',
+                            body: JSON.stringify(updates)
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            showToast('Profile updated successfully', 'success');
+                            if (currentAdmin) {
+                                currentAdmin.username = updates.username;
+                                currentAdmin.phone = updates.phone;
+                                currentAdmin.county = updates.county;
+                                localStorage.setItem(ADMIN_DATA_KEY, JSON.stringify(currentAdmin));
+                            }
+                            const sidebarUsername = document.getElementById('sidebarUsername');
+                            if (sidebarUsername) sidebarUsername.textContent = updates.username;
+                        } else {
+                            throw new Error(data.message);
+                        }
+                    } catch (error) {
+                        showToast(error.message, 'error');
+                    } finally {
+                        if (btnText) btnText.classList.remove('hidden');
+                        if (btnLoading) btnLoading.classList.add('hidden');
+                    }
+                });
+            }
+
+            const changePasswordForm = document.getElementById('changePasswordForm');
+            if (changePasswordForm) {
+                changePasswordForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    const newPassword = document.getElementById('newPassword').value;
+                    const confirmPassword = document.getElementById('confirmPassword').value;
+
+                    if (newPassword !== confirmPassword) {
+                        showToast('New passwords do not match', 'error');
+                        return;
+                    }
+
+                    if (newPassword.length < 8) {
+                        showToast('Password must be at least 8 characters', 'error');
+                        return;
+                    }
+
+                    const btnText = document.getElementById('changePasswordBtnText');
+                    const btnLoading = document.getElementById('changePasswordBtnLoading');
+                    if (btnText) btnText.classList.add('hidden');
+                    if (btnLoading) btnLoading.classList.remove('hidden');
+
+                    try {
+                        const response = await adminFetch('/profile/change-password', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                currentPassword: document.getElementById('currentPassword').value,
+                                newPassword: newPassword
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            showToast('Password changed successfully', 'success');
+                            changePasswordForm.reset();
+                            const tabProfileInfo = document.getElementById('tabProfileInfo');
+                            if (tabProfileInfo) tabProfileInfo.click();
+                        } else {
+                            throw new Error(data.message);
+                        }
+                    } catch (error) {
+                        showToast(error.message, 'error');
+                    } finally {
+                        if (btnText) btnText.classList.remove('hidden');
+                        if (btnLoading) btnLoading.classList.add('hidden');
+                    }
+                });
+            }
+        }
+
+        function enable2FA() { showToast('Two-factor authentication coming soon', 'info'); }
+        function showSessions() { showToast('Active sessions view coming soon', 'info'); }
+        function logoutAllSessions() { if (confirm('Log out from all devices?')) { logout(); } }
+        function sendVerificationEmail() {
+            adminFetch('/profile/resend-verification', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => { if (data.success) showToast('Verification email sent', 'success'); else throw new Error(data.message); })
+                .catch(err => showToast(err.message, 'error'));
+        }
+
+        // ==================== OTHER PAGES ====================
+
+        async function loadCrops() {
+            document.getElementById('pageContent').innerHTML = `<div class="bg-white rounded-xl shadow p-6"><h3 class="text-lg font-bold mb-4">Crops Management</h3><p class="text-gray-600">View and manage all crops across farmers</p></div>`;
+        }
+        async function loadSensors() {
+            document.getElementById('pageContent').innerHTML = `<div class="bg-white rounded-xl shadow p-6"><h3 class="text-lg font-bold mb-4">Sensor Data Analytics</h3><p class="text-gray-600">View and analyze sensor readings</p></div>`;
+        }
+        async function loadSMS() {
+            document.getElementById('pageContent').innerHTML = `<div class="bg-white rounded-xl shadow p-6"><h3 class="text-lg font-bold mb-4">SMS Logs & Analytics</h3><p class="text-gray-600">Monitor SMS delivery and costs</p></div>`;
+        }
+        async function loadSettings() {
+            document.getElementById('pageContent').innerHTML = `<div class="bg-white rounded-xl shadow p-6"><h3 class="text-lg font-bold mb-4">System Settings</h3><p class="text-gray-600">Configure system parameters</p></div>`;
+        }
+        async function loadActivityLogs() {
+            document.getElementById('pageContent').innerHTML = `<div class="bg-white rounded-xl shadow p-6"><h3 class="text-lg font-bold mb-4">Activity Logs</h3><p class="text-gray-600">Monitor admin activities</p></div>`;
+        }
+        async function loadAdmins() {
+            if (currentAdmin && currentAdmin.role !== 'super_admin') { showToast('Super admin access required', 'error'); return; }
+            document.getElementById('pageContent').innerHTML = `<div class="bg-white rounded-xl shadow p-6"><h3 class="text-lg font-bold mb-4">Admin Users Management</h3><p class="text-gray-600">Manage admin accounts and permissions</p></div>`;
+        }
+        
+        // ==================== UTILITY ====================
+        function refreshData() {
+            if (currentPage === 'dashboard') loadDashboard();
+            else if (currentPage === 'farmers') loadFarmers(document.getElementById('prevPage') ? parseInt(document.getElementById('prevPage').dataset.page, 10) || 1 : 1);
+            showToast('Data refreshed', 'success');
+        }
+        function exportData() { showToast('Export feature coming soon', 'info'); }
+        function exportReport() { window.print(); }
+        function sendBulkSMS() {
+            showModal(`
+                <div class="p-6 max-w-md">
+                    <h3 class="text-xl font-bold mb-4">Send Bulk SMS</h3>
+                    <div class="mb-4"><label class="block text-sm font-medium mb-2">Select Farmers</label>
+                        <select class="w-full p-2 border rounded"><option>All Farmers</option><option>Farmers without crops</option><option>Farmers in specific county</option></select>
+                    </div>
+                    <textarea rows="4" class="w-full p-3 border rounded-lg mb-4" placeholder="Message..."></textarea>
+                    <div class="text-sm text-gray-600 mb-4"><p>Estimated recipients: 0</p><p>Estimated cost: KES 0</p></div>
+                    <div class="flex justify-end space-x-2">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 border rounded">Cancel</button>
+                        <button type="button" class="px-4 py-2 bg-green-600 text-white rounded">Send</button>
+                    </div>
+                </div>
+            `);
+        }
+        
+        function showModal(content) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+            modal.innerHTML = `<div class="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">${content}</div>`;
+            modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+            document.getElementById('modalContainer').appendChild(modal);
+        }
+        function closeModal() { const c = document.getElementById('modalContainer'); if (c) c.innerHTML = ''; }
+        
+        function showToast(message, type = 'info') {
+            const colors = { success: 'bg-green-500 text-white', error: 'bg-red-500 text-white', warning: 'bg-yellow-500 text-white', info: 'bg-blue-500 text-white' };
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-lg shadow-lg transform transition-transform duration-300 translate-x-64 opacity-0 ${colors[type]}`;
+            const escape = (s) => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+            toast.innerHTML = `<div class="flex items-center"><i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'} mr-3"></i><div><p>${escape(message)}</p><p class="text-sm opacity-75">${new Date().toLocaleTimeString()}</p></div></div>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-x-64', 'opacity-0'), 10);
+            setTimeout(() => { toast.classList.add('translate-x-64', 'opacity-0'); setTimeout(() => toast.remove(), 300); }, 5000);
+        }
+    </script>
+</body>
+</html>
